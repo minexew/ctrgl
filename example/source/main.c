@@ -230,7 +230,7 @@ int main(int argc, char** argv)
     glBindBuffer(GL_ARRAY_BUFFER, vbuf);
     glBufferData(GL_ARRAY_BUFFER, sizeof(modelVboData), modelVboData, GL_STATIC_DRAW);
 
-    glVertexFormatCTR(3, 32);
+    glVertexFormatCTR(3, sizeof(vertex_s));
     glVertexAttribCTR(0, 3, GL_FLOAT);
     glVertexAttribCTR(1, 2, GL_FLOAT);
     glVertexAttribCTR(2, 3, GL_FLOAT);
