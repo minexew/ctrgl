@@ -451,8 +451,54 @@ void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usa
         linearFree(boundBuffer->data);
 
     boundBuffer->data = linearMemAlign(size, 128);
-    memcpy(boundBuffer->data, data, size);
+
+    if (data != NULL)
+        memcpy(boundBuffer->data, data, size);
+
     boundBuffer->size = size;
+}
+
+void* glMapBuffer(GLenum target, GLenum access)
+{
+    return glMapNamedBuffer((GLuint) boundBuffer, access);
+}
+
+void* glMapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access)
+{
+    return glMapNamedBufferRange((GLuint) boundBuffer, offset, length, access);
+}
+
+void* glMapNamedBuffer(GLuint buffer, GLenum access)
+{
+    GLbufferCTR* buf;
+
+    buf = (GLbufferCTR*) buffer;
+    return buf->data;               /* shared memory rocks */
+}
+
+void* glMapNamedBufferRange(GLuint buffer, GLintptr offset, GLsizei length, GLbitfield access)
+{
+    GLbufferCTR* buf;
+
+    buf = (GLbufferCTR*) buffer;
+
+    if (offset + length > buf->size)
+        return NULL;
+
+    if (buf->data)
+        return (uint8_t*) buf->data + offset;
+    else
+        return NULL;
+}
+
+GLboolean glUnmapBuffer(GLenum target)
+{
+    return GL_TRUE;
+}
+
+GLboolean glUnmapNamedBuffer(GLuint buffer)
+{
+    return GL_TRUE;
 }
 
 /* **** STEREO **** */

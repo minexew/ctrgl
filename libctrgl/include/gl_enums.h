@@ -62,6 +62,23 @@ enum GLblendFactor
     GL_SRC_ALPHA_SATURATE =         14,
 };
 
+enum GLbufferAccess
+{
+    GL_READ_ONLY,
+    GL_WRITE_ONLY,
+    GL_READ_WRITE,
+};
+
+/* lol we completely disregard all of these anyway */
+enum GLbufferMapBits
+{
+    GL_MAP_READ_BIT =               1,
+    GL_MAP_WRITE_BIT =              2,
+    GL_MAP_INVALIDATE_RANGE_BIT =   4,
+    GL_MAP_INVALIDATE_BUFFER_BIT =  8,
+    GL_MAP_UNSYNCHRONIZED_BIT =     16,
+};
+
 enum GLbufferTarget
 {
     GL_ARRAY_BUFFER

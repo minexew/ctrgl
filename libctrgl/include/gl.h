@@ -47,19 +47,21 @@
 
 /* type declarations */
 
-typedef void GLvoid;
-typedef char GLchar;
-typedef size_t GLuint;
-typedef int16_t GLint;
-typedef uint8_t GLubyte;
-typedef float GLclampf;
-typedef float GLfloat;
+typedef void        GLvoid;
+typedef char        GLchar;
+typedef size_t      GLuint;
+typedef int16_t     GLint;
+typedef uint8_t     GLubyte;
+typedef float       GLclampf;
+typedef float       GLfloat;
 
-typedef int GLboolean;
-typedef uint16_t GLenum;
-typedef int32_t GLsizei;
-typedef int32_t GLsizeiptr;
-typedef uint32_t GLsize;
+typedef int         GLboolean;
+typedef uint16_t    GLbitfield;
+typedef uint16_t    GLenum;
+typedef int32_t     GLintptr;
+typedef uint32_t    GLsize;
+typedef int32_t     GLsizei;
+typedef int32_t     GLsizeiptr;
 
 /* enums */
 
@@ -149,6 +151,22 @@ void glGenBuffers(GLsizei n, GLuint* buffers);
 void glDeleteBuffers(GLsizei n, const GLuint* buffers);
 void glBindBuffer(GLenum target, GLuint buffer);
 void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage);
+
+void* glMapBuffer(GLenum target, GLenum access);
+void* glMapNamedBuffer(GLuint buffer, GLenum access);   /* ayy lmao we OpenGL 4.5 now */
+
+void* glMapBufferRange(GLenum target,
+    GLintptr offset,
+    GLsizeiptr length,
+    GLbitfield access);
+
+void* glMapNamedBufferRange(GLuint buffer,
+    GLintptr offset,
+    GLsizei length,
+    GLbitfield access);
+
+GLboolean glUnmapBuffer(GLenum target);
+GLboolean glUnmapNamedBuffer(GLuint buffer);
 
 /* **** VERTEX ARRAYS **** */
 void glVertexFormatCTR(GLuint numAttribs, GLuint vertexSize);
