@@ -36,7 +36,7 @@
 
 #include "gl.h"
 
-#include "gl_matrix_.h"
+typedef float mat4x4[4][4];
 
 extern u32* __linear_heap;
 
@@ -66,30 +66,11 @@ static u32 gpuCmdSize;
 static u32* gpuCmd;
 static u32* gpuCmdRight;
 
-/* buffer matrix list - used for 3D */
-#define BUFFERMATRIXLIST_SIZE 4
+#include "gl_helperfunctions_.h"
+#include "gl_matrix_.h"
+#include "gl_setup_.h"
 
-typedef struct
-{
-    u32 offset;
-    mat4x4 data;
-    // TODO: cache which uniform this is
-}
-bufferMatrix_s;
-
-static bufferMatrix_s bufferMatrixList[BUFFERMATRIXLIST_SIZE];
-static int bufferMatrixListLength;
-static u32 matrixUniforms[2];
-
-static GLubyte clampf2ubyte(GLclampf value)
-{
-    if (value < 0.0f)
-        return 0;
-    else if (value > 1.0f)
-        return 255;
-    else
-        return (GLubyte)(value * 255.0f);
-}
+#include "gl_ctrgl_.h"
 
 void glEnable(GLenum cap)
 {
@@ -131,14 +112,6 @@ void glClearColorRgba8CTR(uint32_t rgba)
 }
 
 /* Alpha Test */
-static void setUpAlphaTest()
-{
-    if (enableState & GL_ALPHA_TEST)
-        GPUCMD_AddSingleParam(0x000F0104, 1 | (alphaTestState.func << 4) | (alphaTestState.ref << 8));
-    else
-        GPUCMD_AddSingleParam(0x000F0104, 0);
-}
-
 void glAlphaFunc(GLenum func, GLclampf ref)
 {
     glAlphaFuncubCTR(func, clampf2ubyte(ref));
@@ -152,14 +125,6 @@ void glAlphaFuncubCTR(GLenum func, GLubyte ref)
 }
 
 /* Culling */
-static void setUpCulling()
-{
-    if (enableState & GL_CULL_FACE)
-        GPUCMD_AddSingleParam(0x000F0040, 2 - (cullState.cullFace ^ cullState.frontFace));
-    else
-        GPUCMD_AddSingleParam(0x000F0040, 0);
-}
-
 void glCullFace(GLenum mode)
 {
     cullState.cullFace = mode;
@@ -173,16 +138,6 @@ void glFrontFace(GLenum mode)
 }
 
 /* Depth Test */
-static void setUpDepthTest()
-{
-    static uint8_t writemask = 0x1F;        /* fixme */
-
-    if (enableState & GL_DEPTH_TEST)
-        GPUCMD_AddSingleParam(0x000F0107, 1 | (depthTestState.func << 4) | (writemask << 8));
-    else
-        GPUCMD_AddSingleParam(0x000F0107, 0);
-}
-
 void glDepthFunc(GLenum func)
 {
     depthTestState.func = func;
@@ -196,22 +151,6 @@ void glDepthMask(GLboolean flag)
 }
 
 /* Stencil */
-static void setUpStencil()
-{
-    static const uint8_t replace = 0x00;        /* TODO: how should this be set */
-
-    if (enableState & GL_STENCIL_TEST)
-        GPUCMD_AddSingleParam(0x000F0105, 1
-                | (stencilState.func << 4)
-                | (replace << 8)
-                | (stencilState.ref << 16)
-                | (stencilState.mask << 24));
-    else
-        GPUCMD_AddSingleParam(0x000F0105, 0);
-
-    GPUCMD_AddSingleParam(0x000F0106, stencilState.sfail | (stencilState.dpfail << 4) | (stencilState.dppass << 8));
-}
-
 void glStencilFunc(GLenum func, GLint ref, GLuint mask)
 {
     stencilState.func = func;
@@ -229,16 +168,6 @@ void glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 }
 
 /* Blending */
-static void setUpBlending()
-{
-    GPUCMD_AddSingleParam(0x000F0103, blendState.blendColor);
-    GPUCMD_AddSingleParam(0x000F0101,
-            blendState.modeRGB | (blendState.modeAlpha << 8)
-            | (blendState.srcRGB << 16) | (blendState.dstRGB << 20)
-            | (blendState.srcAlpha << 24) | (blendState.dstAlpha << 28));
-    GPUCMD_AddSingleParam(0x00020100, 0x00000100);
-}
-
 void glBlendColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 {
     glBlendColorRgba8CTR(glMakeRgba8CTR(
@@ -269,99 +198,6 @@ void glBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum d
 }
 
 /* **** TEXTURES **** */
-static void gpuSetTexture(int unit, void* data, u16 width, u16 height, u32 param, GPU_TEXCOLOR colorType)
-{
-    switch (unit)
-    {
-        case 0:
-            GPUCMD_AddSingleParam(0x000F008E, colorType);
-            GPUCMD_AddSingleParam(0x000F0085, ((u32)data)>>3);
-            GPUCMD_AddSingleParam(0x000F0082, (width<<16)|height);
-            GPUCMD_AddSingleParam(0x000F0083, param);
-            break;
-
-        case 1:
-            GPUCMD_AddSingleParam(0x000F0096, colorType);
-            GPUCMD_AddSingleParam(0x000F0095, ((u32)data)>>3);
-            GPUCMD_AddSingleParam(0x000F0092, (width<<16)|height);
-            GPUCMD_AddSingleParam(0x000F0093, param);
-            break;
-
-        case 2:
-            GPUCMD_AddSingleParam(0x000F009E, colorType);
-            GPUCMD_AddSingleParam(0x000F009D, ((u32)data)>>3);
-            GPUCMD_AddSingleParam(0x000F009A, (width<<16)|height);
-            GPUCMD_AddSingleParam(0x000F009B, param);
-            break;
-    }
-}
-
-static void setUpTexturing()
-{
-    int i;
-
-    /* enables texcoord outputs */
-    GPUCMD_AddSingleParam(0x0002006F, texturingState.enableTextures << 8);
-
-    /* enables texture units */
-    GPUCMD_AddSingleParam(0x000F0080, 0x00011000 | texturingState.enableTextures);
-
-    /* TexEnv */
-    for (i = 0; i < NUM_TEXENV; i++)
-    {
-        static const u8 GPU_TEVID[] = {0xC0, 0xC8, 0xD0, 0xD8, 0xF0, 0xF8};
-
-        GLtexEnvStateCTR* env;
-        u32 param[0x5];
-
-        uint16_t alphaSources, rgbSources;
-        uint16_t alphaOperands, rgbOperands;
-
-        if (!(dirtyTexEnv & (1 << i)))
-            continue;
-
-        memset(param, 0x00, 5 * 4);
-        env = &texturingState.env[i];
-
-        /* TODO: probably cache these */
-        alphaSources =  (env->src0Alpha | (env->src1Alpha << 4) | (env->src2Alpha << 8));
-        rgbSources =    (env->src0RGB | (env->src1RGB << 4) | (env->src2RGB << 8));
-        alphaOperands = (env->operand0Alpha | (env->operand1Alpha << 4) | (env->operand2Alpha << 8));
-        rgbOperands =   (env->operand0RGB | (env->operand1RGB << 4) | (env->operand2RGB << 8));
-
-        param[0x0] = (alphaSources << 16) | rgbSources;
-        param[0x1] = (alphaOperands << 12) | rgbOperands;
-        param[0x2] = (env->combineAlpha << 16) | env->combineRGB;
-        param[0x3] = env->primaryColor;
-        param[0x4] = 0x00000000;        /* unused */
-
-        GPUCMD_Add(0x800F0000 | GPU_TEVID[i], param, 0x00000005);
-    }
-
-    for (i = 0; i < NUM_TEXUNITS; i++)
-    {
-        GLtextureCTR* tex;
-
-        if (!(dirtyTexUnits & (1 << i)))
-            continue;
-
-        if (!(texturingState.enableTextures & (1 << i)))
-            continue;
-
-        tex = texturingState.texUnits[i].boundTexture;
-
-        /* TODO: magFilter, minFilter, format */
-        /* TODO: cache tex->data phys addr */
-
-        static const int magFilter = GPU_TEXTURE_MAG_FILTER(GPU_NEAREST);
-        static const int minFilter = GPU_TEXTURE_MIN_FILTER(GPU_NEAREST);
-
-        gpuSetTexture(i,
-                (void*) osConvertVirtToPhys((u32)(tex->data)),
-                tex->w, tex->h, magFilter | minFilter, 0);
-    }
-}
-
 void glGenTextures(GLsizei n, GLuint* textures)
 {
     GLtextureCTR* tex;
@@ -466,34 +302,6 @@ void glTexEnvubvCTR(GLenum target, GLenum pname, const GLubyte* params)
 }
 
 /* **** SHADERS **** */
-static void setUpShaders()
-{
-    DVLB_s* dvlb;
-    DVLE_s* dvle;
-
-    dvlb = shaderState.dvlb;
-    dvle = &dvlb->DVLE[0];
-
-    /* geometry shader related? */
-    GPUCMD_AddSingleParam(0x00010229, 0x00000000);
-    GPUCMD_AddSingleParam(0x00010244, 0x00000000);
-
-    DVLP_SendCode(&dvlb->DVLP);
-    DVLP_SendOpDesc(&dvlb->DVLP);
-    DVLE_SendConstants(dvle);
-
-    GPUCMD_AddSingleParam(0x00080229, 0x00000000);
-    GPUCMD_AddSingleParam(0x000F02BA, 0x7FFF0000|(dvle->mainOffset & 0xFFFF)); //set entrypoint
-
-    GPUCMD_AddSingleParam(0x000F0252, 0x00000000); // should all be part of DVLE_SendOutmap ?
-
-    DVLE_SendOutmap(dvle);
-
-    //?
-    GPUCMD_AddSingleParam(0x000F0064, 0x00000001);
-    GPUCMD_AddSingleParam(0x000F006F, 0x00000703);
-}
-
 GLuint glCreateProgram(void)
 {
     GLshaderCTR* shader;
@@ -580,43 +388,6 @@ void glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, cons
 }
 
 /* **** VERTEX ARRAYS **** */
-static void setUpVertexArrays()
-{
-    int numAttributes;
-    int i;
-
-    uint64_t attributeFormats;
-    uint16_t attributeMask;
-    uint64_t attributePermutation;
-
-    uint32_t bufferOffsets[1];
-    uint64_t bufferPermutations[1];
-    uint8_t bufferNumAttributes[1];
-
-    numAttributes = vertexArraysState.numAttribs;
-    attributeFormats = 0;
-    attributeMask = 0xFFC;  /* what is this? */
-    attributePermutation = 0;
-
-    for (i = 0; i < numAttributes; i++)
-    {
-        GLvertexAttribCTR* at;
-
-        at = &vertexArraysState.attribs[i];
-        attributeFormats |= ((at->size << 2) | at->type) << (i * 4);
-        attributePermutation |= i << (i * 4);
-    }
-
-    bufferOffsets[0] = 0x00000000;
-    bufferPermutations[0] = attributePermutation;
-    bufferNumAttributes[0] = numAttributes;
-
-    GPU_SetAttributeBuffers(numAttributes,
-        (u32*) osConvertVirtToPhys((u32) __linear_heap),
-        attributeFormats, attributeMask, attributePermutation,
-        1, bufferOffsets, bufferPermutations, bufferNumAttributes);
-}
-
 void glVertexFormatCTR(GLuint numAttribs, GLuint vertexSize)
 {
     vertexArraysState.numAttribs = numAttribs;
@@ -706,79 +477,6 @@ void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m)
     dirtyMatrices |= (1 << mode);
 }
 
-static void flushMatrices()
-{
-    int m;
-
-    for (m = 0; m < 2; m++)
-    {
-        if (dirtyMatrices & (1 << m))
-        {
-            /* projection matrices need to be remembered for proper stereo setup */
-            if (m == GL_PROJECTION && bufferMatrixListLength < BUFFERMATRIXLIST_SIZE)
-            {
-                /* get current offset in command buffer */
-                GPUCMD_GetBuffer(NULL, NULL, &bufferMatrixList[bufferMatrixListLength].offset);
-                /* remember specified contents */
-                memcpy(bufferMatrixList[bufferMatrixListLength].data, matrices[m], sizeof(mat4x4));
-                bufferMatrixListLength++;
-            }
-
-            glUniformMatrix4fv(matrixUniforms[m], 1, GL_TRUE, (float*) matrices[m]);
-            dirtyMatrices &= ~(1 << m);
-        }
-    }
-}
-
-static void adjustBufferMatrices(mat4x4 transformation)
-{
-    int i;
-    u32* buffer;
-    u32 offset;
-    GPUCMD_GetBuffer(&buffer, NULL, &offset);
-
-    for (i = 0; i < bufferMatrixListLength; i++)
-    {
-        u32 o = bufferMatrixList[i].offset;
-
-        if (o + 2 < offset) //TODO : better check, need to account for param size
-        {
-            mat4x4 newMatrix;
-            GPUCMD_SetBufferOffset(o);
-            /* multiply original matrix uploaded in flushMatrices with the transformation matrix for this eye */
-            multMatrix4x4((float*) bufferMatrixList[i].data, (float*) transformation, (float*) newMatrix);
-            /* overwrite the right location in the command buffer */
-            glUniformMatrix4fv(matrixUniforms[GL_PROJECTION], 1, GL_TRUE, (float*) newMatrix);
-        }
-    }
-
-    GPUCMD_SetBufferOffset(offset);
-}
-
-void GPU_DrawArrayDirectly(GPU_Primitive_t primitive, u8* data, u32 n)
-{
-    //set attribute buffer address
-    GPUCMD_AddSingleParam(0x000F0200, (osConvertVirtToPhys((u32)data))>>3);
-    //set primitive type
-    GPUCMD_AddSingleParam(0x0002025E, primitive);
-    GPUCMD_AddSingleParam(0x0002025F, 0x00000001);
-    //index buffer not used for drawArrays but 0x000F0227 still required
-    GPUCMD_AddSingleParam(0x000F0227, 0x80000000);
-    //pass number of vertices
-    GPUCMD_AddSingleParam(0x000F0228, n);
-
-    GPUCMD_AddSingleParam(0x00010253, 0x00000001);
-
-    GPUCMD_AddSingleParam(0x00010245, 0x00000000);
-    GPUCMD_AddSingleParam(0x000F022E, 0x00000001);
-    GPUCMD_AddSingleParam(0x0008025E, 0x00000000);      // post-kick nop
-    GPUCMD_AddSingleParam(0x0008025E, 0x00000000);      // post-kick nop #2
-    GPUCMD_AddSingleParam(0x00010245, 0x00000001);
-    GPUCMD_AddSingleParam(0x000F0231, 0x00000001);
-
-    GPUCMD_AddSingleParam(0x000F0111, 0x00000001); //breaks stuff
-}
-
 void glDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
     /* TODO: precompute commands */
@@ -794,287 +492,8 @@ void glDrawArrays(GLenum mode, GLint first, GLsizei count)
     {
         _GPUCMD_AddRawCommands(vbo->commands, vbo->commandsSize);
     }else{*/
-        GPU_DrawArrayDirectly(GPU_TRIANGLES, (u8*) boundBuffer->data + first * vertexArraysState.vertexSize, count);
+        gpuDrawArrayDirectly(GPU_TRIANGLES, (u8*) boundBuffer->data + first * vertexArraysState.vertexSize, count);
     //}
     // debugValue[5]+=(u32)(svcGetSystemTick()-val);
     // debugValue[6]++;
-}
-
-void ctrglInit(void)
-{
-    int i;
-
-    alphaTestState.func = GL_ALWAYS;
-    alphaTestState.ref = 0;
-
-    blendState.blendColor = 0x00000000;
-    blendState.dstAlpha = GL_ZERO;
-    blendState.dstRGB = GL_ZERO;
-    blendState.modeAlpha = GL_FUNC_ADD;
-    blendState.modeRGB = GL_FUNC_ADD;
-    blendState.srcAlpha = GL_ONE;
-    blendState.srcRGB = GL_ONE;
-
-    cullState.cullFace = GL_BACK;
-    cullState.frontFace = GL_CCW;
-
-    depthTestState.func = GL_LESS;
-    depthTestState.mask = GL_TRUE;
-
-    shaderState.dvlb = NULL;
-
-    stereoState.enabled = GL_FALSE;
-
-    texturingState.activeTexture = 0;
-    texturingState.enableTextures = 0;
-
-    /* TODO: are these correct GL defaults? */
-    texturingState.env[0].primaryColor = 0xffffffff;
-    texturingState.env[0].combineRGB = GL_MODULATE;
-    texturingState.env[0].combineAlpha = GL_MODULATE;
-    texturingState.env[0].src0RGB = GL_TEXTURE0;
-    texturingState.env[0].src1RGB = GL_PRIMARY_COLOR;
-    texturingState.env[0].src2RGB = GL_PRIMARY_COLOR;
-    texturingState.env[0].src0Alpha = GL_TEXTURE0;
-    texturingState.env[0].src1Alpha = GL_PRIMARY_COLOR;
-    texturingState.env[0].src2Alpha = GL_PRIMARY_COLOR;
-    texturingState.env[0].operand0RGB = 0;
-    texturingState.env[0].operand1RGB = 0;
-    texturingState.env[0].operand2RGB = 0;
-    texturingState.env[0].operand0Alpha = 0;
-    texturingState.env[0].operand1Alpha = 0;
-    texturingState.env[0].operand2Alpha = 0;
-
-    for (i = 1; i < NUM_TEXENV; i++)
-    {
-        texturingState.env[i].primaryColor = 0xffffffff;
-        texturingState.env[i].combineRGB = GL_REPLACE;
-        texturingState.env[i].combineAlpha = GL_REPLACE;
-        texturingState.env[i].src0RGB = GL_PREVIOUS;
-        texturingState.env[i].src1RGB = GL_PRIMARY_COLOR;
-        texturingState.env[i].src2RGB = GL_PRIMARY_COLOR;
-        texturingState.env[i].src0Alpha = GL_PREVIOUS;
-        texturingState.env[i].src1Alpha = GL_PRIMARY_COLOR;
-        texturingState.env[i].src2Alpha = GL_PRIMARY_COLOR;
-        texturingState.env[i].operand0RGB = 0;
-        texturingState.env[i].operand1RGB = 0;
-        texturingState.env[i].operand2RGB = 0;
-        texturingState.env[i].operand0Alpha = 0;
-        texturingState.env[i].operand1Alpha = 0;
-        texturingState.env[i].operand2Alpha = 0;
-    }
-
-    for (i = 1; i < NUM_TEXUNITS; i++)
-    {
-        texturingState.texUnits[i].boundTexture = NULL;
-    }
-
-    vertexArraysState.numAttribs = 0;
-    vertexArraysState.vertexSize = 0;
-
-    /* TODO: init stencilState */
-
-    dirtyState = 0xffffffff;
-    enableState = 0x00000000;
-    dirtyMatrices = 0xff;
-    dirtyTexUnits = 0xff;
-    dirtyTexEnv = 0xff;
-
-    /* TODO: initialize matrices */
-
-    boundBuffer = NULL;
-    clearColor = glMakeRgba8CTR(0xff, 0xff, 0xff, 0xff);
-
-    gpuCmdSize = 0;
-    gpuCmd = NULL;
-    gpuCmdRight = NULL;
-}
-
-void ctrglExit(void)
-{
-    /* FIXME: take the cleanup a bit more seriously... */
-}
-
-void ctrglAllocateCommandBuffers(GLsize size, GLuint count)
-{
-    gpuCmdSize = size;
-
-    gpuCmd = (u32*)linearAlloc(gpuCmdSize * 4);
-
-    if (count > 1)
-        gpuCmdRight = (u32*)linearAlloc(gpuCmdSize * 4);
-    else
-        gpuCmdRight = NULL;
-}
-
-void ctrglGetCommandBuffers(u32* size, u32** gpuCmd_, u32** gpuCmdRight_)
-{
-    *size = gpuCmdSize;
-    *gpuCmd_ = gpuCmd;
-    *gpuCmdRight_ = gpuCmdRight;
-}
-
-void ctrglResetGPU(void)
-{
-    GPU_Reset(NULL, gpuCmd, gpuCmdSize);
-}
-
-static u32 f32tof24(float f)
-{
-    if(!f)return 0;
-    u32 v=*((u32*)&f);
-    u8 s=v>>31;
-    u32 exp=((v>>23)&0xFF)-0x40;
-    u32 man=(v>>7)&0xFFFF;
-
-    if(exp>=0)return man|(exp<<16)|(s<<23);
-    else return s<<23;
-}
-
-static void gpuDepthRange(float nearVal, float farVal)
-{
-    GPUCMD_AddSingleParam(0x000F006D, 0x00000001); //?
-    GPUCMD_AddSingleParam(0x000F004D, f32tof24(nearVal-farVal));   // seems more like it
-    GPUCMD_AddSingleParam(0x000F004E, f32tof24(nearVal));
-}
-
-void ctrglBeginRendering(void)
-{
-    dirtyState |= (GL_CULL_FACE | GL_STENCIL_TEST | GL_BLEND | GL_ALPHA_TEST | GL_DEPTH_TEST
-            | GL_SHADER_PROGRAM_CTR | GL_TEXTURING_CTR | GL_VERTEX_ARRAYS_CTR);
-
-    GPUCMD_SetBufferOffset(0);
-    bufferMatrixListLength = 0;
-
-    GPU_SetViewport(
-        (u32*) osConvertVirtToPhys((u32) gpuDepthBuffer),
-        (u32*) osConvertVirtToPhys((u32) gpuFrameBuffer),
-        0, 0, 240 * 2, 400);
-
-    gpuDepthRange(0.0f, 1.0f);
-}
-
-void ctrglFlushState(uint32_t mask)
-{
-    mask &= dirtyState;
-
-    /* the order of these seems to be extremely fragile */
-
-    if (mask & GL_CULL_FACE)
-        setUpCulling();
-
-    if (mask & GL_STENCIL_TEST)
-        setUpStencil();
-
-    if (mask & GL_BLEND)
-        setUpBlending();
-
-    if (mask & GL_ALPHA_TEST)
-        setUpAlphaTest();
-
-    if (mask & GL_DEPTH_TEST)
-    {
-        setUpDepthTest();
-        GPUCMD_AddSingleParam(0x00010062, 0); 
-        GPUCMD_AddSingleParam(0x000F0118, 0);
-    }
-
-    if (mask & GL_SHADER_PROGRAM_CTR)
-        setUpShaders();
-
-    if (mask & GL_TEXTURING_CTR)
-        setUpTexturing();
-
-    if (mask & GL_VERTEX_ARRAYS_CTR)
-        setUpVertexArrays();
-
-    dirtyState &= ~mask;
-}
-
-void ctrglFinishRendering()
-{
-    GPUCMD_Finalize();
-    GPU_FinishDrawing();
-
-    if (stereoState.enabled)
-    {
-        /* for more information about stereo rendering:
-            http://doc-ok.org/?p=77
-            http://developer.download.nvidia.com/presentations/2009/GDC/GDC09-3DVision-The_In_and_Out.pdf
-        */
-
-        u32 gpuCmdSize;
-        u32* gpuCmd;
-        u32* gpuCmdRight;
-
-        mat4x4 adjustmentMatrix;
-        loadIdentity4x4((float*) adjustmentMatrix);
-
-        ctrglGetCommandBuffers(&gpuCmdSize, &gpuCmd, &gpuCmdRight);
-
-        //new and exciting 3D !
-        //make a copy of left gpu buffer
-        u32 offset; GPUCMD_GetBuffer(NULL, NULL, &offset);
-        memcpy(gpuCmdRight, gpuCmd, offset*4);
-
-        double frustumShift = (stereoState.interaxial * 0.5f) * (stereoState.nearZ / stereoState.screenZ);
-        float modelTranslation = stereoState.interaxial * 0.5f;
-
-        //adjust left gpu buffer fo 3D !
-        adjustmentMatrix[0][2] = frustumShift;
-        adjustmentMatrix[0][3] = modelTranslation;
-        adjustBufferMatrices(adjustmentMatrix);
-
-        //draw left framebuffer
-        GPUCMD_FlushAndRun(NULL);
-
-        //while GPU starts drawing the left buffer, adjust right one for 3D !
-        GPUCMD_SetBuffer(gpuCmdRight, gpuCmdSize, offset);
-        adjustmentMatrix[0][2] = -frustumShift;
-        adjustmentMatrix[0][3] = -modelTranslation;
-        adjustBufferMatrices(adjustmentMatrix);
-
-        //we wait for the left buffer to finish drawing
-        gspWaitForP3D();
-        GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0, (u32*)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL), 0x019001E0, 0x01001000);
-        gspWaitForPPF();
-
-        //we draw the right buffer, wait for it to finish and then switch back to left one
-        //clear the screen
-        GX_SetMemoryFill(NULL, gpuFrameBuffer, clearColor, &gpuFrameBuffer[0x2EE00], 0x201,
-                (u32*)gpuDepthBuffer, 0xffffffff, &gpuDepthBuffer[0x2EE00], 0x201);
-        gspWaitForPSC0();
-
-        //draw the right framebuffer
-        GPUCMD_FlushAndRun(NULL);
-        gspWaitForP3D();
-
-        //transfer from GPU output buffer to actual framebuffer
-        GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0,
-                (u32*)gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, NULL, NULL),
-                0x019001E0, 0x01001000);
-        gspWaitForPPF();
-
-        GPUCMD_SetBuffer(gpuCmd, gpuCmdSize, 0);
-    }
-    else
-    {
-        GPUCMD_FlushAndRun(NULL);
-        gspWaitForP3D();
-
-        /* transfer from PICA framebuffer to CTR framebuffer */
-        GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0,
-                (u32*)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL),
-                0x019001E0, 0x01001000);
-        gspWaitForPPF();
-    }
-
-    /* glClear(GL_COLOR_BIT | GL_DEPTH_BIT) */
-    GX_SetMemoryFill(NULL, gpuFrameBuffer, clearColor, &gpuFrameBuffer[0x2EE00], 0x201,
-            (u32*)gpuDepthBuffer, 0xffffffff, &gpuDepthBuffer[0x2EE00], 0x201);
-    gspWaitForPSC0();
-
-    gfxSwapBuffersGpu();
-
-    gspWaitForEvent(GSPEVENT_VBlank0, true);
 }

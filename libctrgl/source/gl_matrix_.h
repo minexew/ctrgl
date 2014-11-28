@@ -28,25 +28,87 @@
 #error This is a private CTRGL implementation file. Please use #include <gl.h> instead.
 #endif
 
-typedef float mat4x4[4][4];
+/* buffer matrix list - used for stereo */
+#define BUFFERMATRIXLIST_SIZE 4
+
+typedef struct
+{
+    u32 offset;
+    mat4x4 data;
+    // TODO: cache which uniform this is
+}
+bufferMatrix_s;
+
+static bufferMatrix_s bufferMatrixList[BUFFERMATRIXLIST_SIZE];
+static int bufferMatrixListLength;
+static u32 matrixUniforms[2];
 
 static void loadIdentity4x4(float* m)
 {
-	memset(m, 0x00, 4 * 4 * sizeof(float));
+    memset(m, 0x00, 4 * 4 * sizeof(float));
 
-	m[0] = 1.0f;
-	m[5] = 1.0f;
-	m[10] = 1.0f;
-	m[15] = 1.0f;
+    m[0] = 1.0f;
+    m[5] = 1.0f;
+    m[10] = 1.0f;
+    m[15] = 1.0f;
 }
 
 static void multMatrix4x4(float* m1, float* m2, float* m)
 {
-	int i, j;
-	for (i = 0; i < 4; i++)
-		for(j = 0; j < 4; j++)
-			m[i + j * 4] = (m1[0 + j * 4] * m2[i + 0 * 4])
-					+ (m1[1 + j * 4] * m2[i + 1 * 4])
-					+ (m1[2 + j * 4] * m2[i + 2 * 4])
-					+ (m1[3 + j * 4] * m2[i + 3 * 4]);
+    int i, j;
+    for (i = 0; i < 4; i++)
+        for(j = 0; j < 4; j++)
+            m[i + j * 4] = (m1[0 + j * 4] * m2[i + 0 * 4])
+                    + (m1[1 + j * 4] * m2[i + 1 * 4])
+                    + (m1[2 + j * 4] * m2[i + 2 * 4])
+                    + (m1[3 + j * 4] * m2[i + 3 * 4]);
+}
+
+static void flushMatrices()
+{
+    int m;
+
+    for (m = 0; m < 2; m++)
+    {
+        if (dirtyMatrices & (1 << m))
+        {
+            /* projection matrices need to be remembered for proper stereo setup */
+            if (m == GL_PROJECTION && bufferMatrixListLength < BUFFERMATRIXLIST_SIZE)
+            {
+                /* get current offset in command buffer */
+                GPUCMD_GetBuffer(NULL, NULL, &bufferMatrixList[bufferMatrixListLength].offset);
+                /* remember specified contents */
+                memcpy(bufferMatrixList[bufferMatrixListLength].data, matrices[m], sizeof(mat4x4));
+                bufferMatrixListLength++;
+            }
+
+            glUniformMatrix4fv(matrixUniforms[m], 1, GL_TRUE, (float*) matrices[m]);
+            dirtyMatrices &= ~(1 << m);
+        }
+    }
+}
+
+static void adjustBufferMatrices(mat4x4 transformation)
+{
+    int i;
+    u32* buffer;
+    u32 offset;
+    GPUCMD_GetBuffer(&buffer, NULL, &offset);
+
+    for (i = 0; i < bufferMatrixListLength; i++)
+    {
+        u32 o = bufferMatrixList[i].offset;
+
+        if (o + 2 < offset) //TODO : better check, need to account for param size
+        {
+            mat4x4 newMatrix;
+            GPUCMD_SetBufferOffset(o);
+            /* multiply original matrix uploaded in flushMatrices with the transformation matrix for this eye */
+            multMatrix4x4((float*) bufferMatrixList[i].data, (float*) transformation, (float*) newMatrix);
+            /* overwrite the right location in the command buffer */
+            glUniformMatrix4fv(matrixUniforms[GL_PROJECTION], 1, GL_TRUE, (float*) newMatrix);
+        }
+    }
+
+    GPUCMD_SetBufferOffset(offset);
 }
