@@ -36,6 +36,10 @@
 #ifndef CTRGL_H
 #define CTRGL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <3ds.h>
 #include <stdint.h>
 
@@ -188,5 +192,9 @@ void glDrawArrays(GLenum mode,
 
 /* **** NOT SORTED YET **** */
 void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
