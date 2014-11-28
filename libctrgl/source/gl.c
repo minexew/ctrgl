@@ -447,15 +447,37 @@ void glBindBuffer(GLenum target, GLuint buffer)
 
 void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
 {
-    if (boundBuffer->data != NULL)
-        linearFree(boundBuffer->data);
+    glNamedBufferData((GLuint) boundBuffer, size, data, usage);
+}
 
-    boundBuffer->data = linearMemAlign(size, 128);
+void glNamedBufferData(GLuint buffer, GLsizei size, const void* data, GLenum usage)
+{
+    GLbufferCTR* buf;
+
+    buf = (GLbufferCTR*) buffer;
+
+    if (buf->data != NULL)
+        linearFree(buf->data);
+
+    buf->data = linearMemAlign(size, 128);
 
     if (data != NULL)
-        memcpy(boundBuffer->data, data, size);
+        memcpy(buf->data, data, size);
 
-    boundBuffer->size = size;
+    buf->size = size;
+}
+
+void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data)
+{
+    glNamedBufferSubData((GLuint) boundBuffer, offset, size, data);
+}
+
+void glNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizei size, const void* data)
+{
+    GLbufferCTR* buf;
+
+    buf = (GLbufferCTR*) buffer;
+    memcpy((uint8_t*) buf->data + offset, data, size);
 }
 
 void* glMapBuffer(GLenum target, GLenum access)

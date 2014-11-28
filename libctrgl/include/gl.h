@@ -150,7 +150,12 @@ void glGetProgramDvlbCTR(GLuint program, DVLB_s** dvlb_out);
 void glGenBuffers(GLsizei n, GLuint* buffers);
 void glDeleteBuffers(GLsizei n, const GLuint* buffers);
 void glBindBuffer(GLenum target, GLuint buffer);
+
 void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage);
+void glNamedBufferData(GLuint buffer, GLsizei size, const void* data, GLenum usage);
+
+void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
+void glNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizei size, const void* data);
 
 void* glMapBuffer(GLenum target, GLenum access);
 void* glMapNamedBuffer(GLuint buffer, GLenum access);   /* ayy lmao we OpenGL 4.5 now */
