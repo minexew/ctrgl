@@ -250,7 +250,7 @@ void glBindTexture(GLenum target, GLuint texture)
     dirtyTexUnits |= (1 << texturingState.activeTexture);
 }
 
-void glGetDirectTexDataPointerCTR(GLuint texture, GLvoid** data_out)
+void glGetNamedTexDataPointerCTR(GLuint texture, GLvoid** data_out)
 {
     GLtextureCTR* tex;
 
@@ -262,11 +262,11 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat,
         GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type,
         const GLvoid* data)
 {
-    glDirectTexImage2DCTR((GLuint) texturingState.texUnits[texturingState.activeTexture].boundTexture,
+    glNamedTexImage2DCTR((GLuint) texturingState.texUnits[texturingState.activeTexture].boundTexture,
             level, internalFormat, width, height, border, format, type, data);
 }
 
-void glDirectTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
+void glNamedTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
         GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type,
         const GLvoid* data)
 {
@@ -281,7 +281,9 @@ void glDirectTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
 
     textureDataSize = width * height * 4;
     tex->data = linearMemAlign(textureDataSize, 0x80);
-    memcpy(tex->data, data, textureDataSize);
+
+    if (data)
+        memcpy(tex->data, data, textureDataSize);
 
     tex->w = width;
     tex->h = height;

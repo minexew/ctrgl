@@ -129,10 +129,10 @@ void glTexImage2D(GLenum target,    /* must be GL_TEXTURE_2D */
         GLenum type,                /* must be GL_UNSIGNED_BYTE */
         const GLvoid* data);
 
-void glDirectTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
+void glNamedTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
         GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type,
         const GLvoid* data);        /* arguments: see glTexImage2D */
-void glGetDirectTexDataPointerCTR(GLuint texture, GLvoid** data_out);
+void glGetNamedTexDataPointerCTR(GLuint texture, GLvoid** data_out);
 void glTexEnvubvCTR(GLenum target,  /* must be GL_TEXTURE_ENV */
         GLenum pname,               /* must be GL_TEXTURE_ENV_COLOR */
         const GLubyte* params);
