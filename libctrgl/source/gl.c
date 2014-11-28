@@ -540,9 +540,13 @@ void glStereoEnableCTR(GLfloat interaxial, GLfloat nearZ, GLfloat screenZ)
 }
 
 /* **** NOT SORTED YET **** */
+void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m)
+{
+    memcpy(m, matrices[mode], sizeof(mat4x4));
+}
+
 void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m)
 {
-    //gsLoadMatrix(mode, (float*) m);
     memcpy(matrices[mode], m, sizeof(mat4x4));
     dirtyMatrices |= (1 << mode);
 }
@@ -562,6 +566,7 @@ void glDrawArrays(GLenum mode, GLint first, GLsizei count)
     {
         _GPUCMD_AddRawCommands(vbo->commands, vbo->commandsSize);
     }else{*/
+        // TODO: cache VBO phys address
         gpuDrawArrayDirectly(GPU_TRIANGLES, (u8*) boundBuffer->data + first * vertexArraysState.vertexSize, count);
     //}
     // debugValue[5]+=(u32)(svcGetSystemTick()-val);

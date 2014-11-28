@@ -191,6 +191,7 @@ void glDrawArrays(GLenum mode,
     GLsizei count);
 
 /* **** NOT SORTED YET **** */
+void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
 void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m);
 
 #ifdef __cplusplus

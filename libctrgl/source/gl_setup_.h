@@ -43,6 +43,7 @@ static void setUpBlending()
             blendState.modeRGB | (blendState.modeAlpha << 8)
             | (blendState.srcRGB << 16) | (blendState.dstRGB << 20)
             | (blendState.srcAlpha << 24) | (blendState.dstAlpha << 28));
+    // TODO: GL_BLEND enable/disable
     GPUCMD_AddSingleParam(0x00020100, 0x00000100);
 }
 
