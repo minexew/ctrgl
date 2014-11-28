@@ -329,6 +329,9 @@ void glUseProgram(GLuint program)
 
     matrixUniforms[0] = glGetUniformLocation(program, "projection");
     matrixUniforms[1] = glGetUniformLocation(program, "modelview");
+
+    dirtyState |= GL_SHADER_PROGRAM_CTR;
+    dirtyMatrices = 0xff;
 }
 
 void glGetProgramDvlbCTR(GLuint program, DVLB_s** dvlb_out)
