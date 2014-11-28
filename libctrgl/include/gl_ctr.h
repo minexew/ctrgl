@@ -99,6 +99,7 @@ typedef struct
 {
     GLenum func         : 3;
     GLboolean mask      : 1;
+    GLubyte colorMask   : 4;
 }
 GLdepthTestStateCTR;
 

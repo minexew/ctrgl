@@ -150,6 +150,12 @@ void glDepthMask(GLboolean flag)
     dirtyState |= GL_DEPTH_TEST;
 }
 
+void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
+{
+    depthTestState.colorMask = (red | (green << 1) | (blue << 2) | (alpha << 3));
+    dirtyState |= GL_DEPTH_TEST;
+}
+
 /* Stencil */
 void glStencilFunc(GLenum func, GLint ref, GLuint mask)
 {

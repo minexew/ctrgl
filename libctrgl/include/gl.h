@@ -110,6 +110,7 @@ void glFrontFace(GLenum mode);
 /* Depth Test */
 void glDepthFunc(GLenum func);
 void glDepthMask(GLboolean flag);
+void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 /* Stencil */
 void glStencilFunc(GLenum func, GLint ref, GLuint mask);

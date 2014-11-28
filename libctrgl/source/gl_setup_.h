@@ -57,12 +57,11 @@ static void setUpCulling()
 
 static void setUpDepthTest()
 {
-    static uint8_t writemask = 0x1F;        /* fixme */
-
     if (enableState & GL_DEPTH_TEST)
-        GPUCMD_AddSingleParam(0x000F0107, 1 | (depthTestState.func << 4) | (writemask << 8));
+        GPUCMD_AddSingleParam(0x000F0107, 1 | (depthTestState.func << 4)
+                | (depthTestState.colorMask << 8) | (depthTestState.mask << 12));
     else
-        GPUCMD_AddSingleParam(0x000F0107, 0);
+        GPUCMD_AddSingleParam(0x000F0107, 0 | (depthTestState.colorMask << 8) | (depthTestState.mask << 12));
 }
 
 static void setUpShaders()

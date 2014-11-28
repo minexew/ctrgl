@@ -48,6 +48,7 @@ void ctrglInit(void)
 
     depthTestState.func = GL_LESS;
     depthTestState.mask = GL_TRUE;
+    depthTestState.colorMask = 0x0f;
 
     shaderState.dvlb = NULL;
 
