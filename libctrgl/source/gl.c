@@ -235,9 +235,8 @@ void glGenTextures(GLsizei n, GLuint* textures)
     while (n-- > 0)
     {
         tex = (GLtextureCTR*) malloc(sizeof(GLtextureCTR));
-        glInitTextureCTR(tex);
+        *textures = glInitTextureCTR(tex);
 
-        *textures = (GLuint) tex;
         textures++;
     }
 }
@@ -486,9 +485,8 @@ void glGenBuffers(GLsizei n, GLuint* buffers)
     while (n-- > 0)
     {
         buf = (GLbufferCTR*) malloc(sizeof(GLbufferCTR));
-        glInitBufferCTR(buf);
+        *buffers = glInitBufferCTR(buf);
 
-        *buffers = (GLuint) buf;
         buffers++;
     }
 }
