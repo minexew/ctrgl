@@ -43,6 +43,8 @@ extern "C" {
 #include <3ds.h>
 #include <stdint.h>
 
+#define CTRGL_VERSION_STRING "HEAD"
+
 #define glMakeRgba8CTR(r,g,b,a) (\
     (((r) & 0xFF) << 24)\
     | (((g) & 0xFF) << 16)\
@@ -140,7 +142,7 @@ void glTexEnvubvCTR(GLenum target,  /* must be GL_TEXTURE_ENV */
 
 /* **** SHADERS **** */
 GLuint glCreateProgram(void);
-void glUseProgram(GLuint program);  /* this can currently be done only once */
+void glUseProgram(GLuint program);
 GLint glGetUniformLocation(GLuint program, const GLchar* name);
 
 void glUniform4fv(GLint location, GLsizei count, const GLfloat* value);
@@ -156,14 +158,18 @@ void glGenBuffers(GLsizei n, GLuint* buffers);
 void glDeleteBuffers(GLsizei n, const GLuint* buffers);
 void glBindBuffer(GLenum target, GLuint buffer);
 
-void glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage);
-void glNamedBufferData(GLuint buffer, GLsizei size, const void* data, GLenum usage);
+void glBufferData(GLenum target, GLsizeiptr size,
+        const GLvoid* data,         /* may be NULL */
+        GLenum usage);
+void glNamedBufferData(GLuint buffer, GLsizei size,
+        const void* data,           /* may be NULL */
+        GLenum usage);
 
 void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
 void glNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizei size, const void* data);
 
 void* glMapBuffer(GLenum target, GLenum access);
-void* glMapNamedBuffer(GLuint buffer, GLenum access);   /* ayy lmao we OpenGL 4.5 now */
+void* glMapNamedBuffer(GLuint buffer, GLenum access);
 
 void* glMapBufferRange(GLenum target,
     GLintptr offset,
@@ -187,9 +193,7 @@ void glStereoDisableCTR(void);
 void glStereoEnableCTR(GLfloat nearZ, GLfloat screenZ, GLfloat interaxial);
 
 /* **** DRAWING **** */
-void glDrawArrays(GLenum mode,
-    GLint first,                    /* must be 0 */
-    GLsizei count);
+void glDrawArrays(GLenum mode, GLint first, GLsizei count);
 
 /* **** NOT SORTED YET **** */
 void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
