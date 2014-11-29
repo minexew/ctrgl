@@ -36,8 +36,6 @@
 
 #include "gl.h"
 
-typedef float mat4x4[4][4];
-
 extern u32* __linear_heap;
 
 static u32* gpuFrameBuffer = (u32*) 0x1F119400;
@@ -48,13 +46,13 @@ static GLalphaTestStateCTR      alphaTestState;
 static GLblendStateCTR          blendState;
 static GLcullStateCTR           cullState;
 static GLdepthTestStateCTR      depthTestState;
+static GLmatricesStateCTR       matricesState;
 static GLshaderStateCTR         shaderState;
 static GLstencilStateCTR        stencilState;
 static GLstereoStateCTR         stereoState;
 static GLtexturingStateCTR      texturingState;
 static GLvertexArraysStateCTR   vertexArraysState;
 
-static mat4x4 matrices[2];
 static GLbufferCTR* boundBuffer;
 static u32 clearColor;
 
@@ -372,10 +370,7 @@ void glUseProgram(GLuint program)
     prog = (GLprogramCTR*) program;
     shaderState.program = prog;
 
-    matrixUniforms[0] = prog->projectionUniform;
-    matrixUniforms[1] = prog->modelviewUniform;
-
-    dirtyState |= GL_SHADER_PROGRAM_CTR;
+    dirtyState |= (GL_SHADER_PROGRAM_CTR | GL_MATRICES_CTR);
     dirtyMatrices = 0xff;
 }
 
@@ -599,24 +594,38 @@ void glStereoDisableCTR(void)
     stereoState.enabled = GL_FALSE;
 }
 
-void glStereoEnableCTR(GLfloat interaxial, GLfloat nearZ, GLfloat screenZ)
+void glStereoEnableCTR(GLfloat interaxial)
 {
     stereoState.enabled = GL_TRUE;
     stereoState.interaxial = interaxial;
-    stereoState.nearZ = nearZ;
-    stereoState.screenZ = screenZ;
 }
 
 /* **** NOT SORTED YET **** */
 void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m)
 {
-    memcpy(m, matrices[mode], sizeof(mat4x4));
+    if (mode == GL_PROJECTION)
+        memcpy(m, matricesState.projection, sizeof(GLmat4x4));
+    else
+        memcpy(m, matricesState.modelview, sizeof(GLmat4x4));
 }
 
-void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m)
+void glProjectionMatrixfCTR(const GLfloat* m, float nearZ, float screenZ, float scale)
 {
-    memcpy(matrices[mode], m, sizeof(mat4x4));
-    dirtyMatrices |= (1 << mode);
+    memcpy(matricesState.projection, m, sizeof(GLmat4x4));
+    matricesState.nearZ = nearZ;
+    matricesState.screenZ = screenZ;
+    matricesState.scale = scale;
+
+    dirtyState |= GL_MATRICES_CTR;
+    dirtyMatrices |= (1 << GL_PROJECTION);
+}
+
+void glModelviewMatrixfCTR(const GLfloat* m)
+{
+    memcpy(matricesState.modelview, m, sizeof(GLmat4x4));
+
+    dirtyState |= GL_MATRICES_CTR;
+    dirtyMatrices |= (1 << GL_MODELVIEW);
 }
 
 void glDrawArrays(GLenum mode, GLint first, GLsizei count)

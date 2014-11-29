@@ -34,14 +34,14 @@
 typedef struct
 {
     u32 offset;
-    mat4x4 data;
-    // TODO: cache which uniform this is
+    GLmat4x4 projection;
+    float nearZ, screenZ, scale;
+    GLint projectionUniform;
 }
 bufferMatrix_s;
 
 static bufferMatrix_s bufferMatrixList[BUFFERMATRIXLIST_SIZE];
 static int bufferMatrixListLength;
-static u32 matrixUniforms[2];
 
 static void loadIdentity4x4(float* m)
 {
@@ -56,43 +56,55 @@ static void loadIdentity4x4(float* m)
 static void multMatrix4x4(float* m1, float* m2, float* m)
 {
     int i, j;
+
     for (i = 0; i < 4; i++)
         for(j = 0; j < 4; j++)
+        {
             m[i + j * 4] = (m1[0 + j * 4] * m2[i + 0 * 4])
                     + (m1[1 + j * 4] * m2[i + 1 * 4])
                     + (m1[2 + j * 4] * m2[i + 2 * 4])
                     + (m1[3 + j * 4] * m2[i + 3 * 4]);
+        }
 }
 
 static void flushMatrices()
 {
-    int m;
-
-    for (m = 0; m < 2; m++)
+    /* projection is complicated, because we have to remember it for further stereo processing */
+    if ((dirtyMatrices & (1 << GL_PROJECTION)) && shaderState.program->projectionUniform != -1)
     {
-        if (dirtyMatrices & (1 << m))
+        if (bufferMatrixListLength < BUFFERMATRIXLIST_SIZE)
         {
-            /* projection matrices need to be remembered for proper stereo setup */
-            if (m == GL_PROJECTION && bufferMatrixListLength < BUFFERMATRIXLIST_SIZE)
-            {
-                /* get current offset in command buffer */
-                GPUCMD_GetBuffer(NULL, NULL, &bufferMatrixList[bufferMatrixListLength].offset);
-                /* remember specified contents */
-                memcpy(bufferMatrixList[bufferMatrixListLength].data, matrices[m], sizeof(mat4x4));
-                bufferMatrixListLength++;
-            }
+            /* get current offset in command buffer */
+            GPUCMD_GetBuffer(NULL, NULL, &bufferMatrixList[bufferMatrixListLength].offset);
 
-            glUniformMatrix4fv(matrixUniforms[m], 1, GL_TRUE, (float*) matrices[m]);
-            dirtyMatrices &= ~(1 << m);
+            /* remember the settings */
+            memcpy(bufferMatrixList[bufferMatrixListLength].projection, matricesState.projection, sizeof(GLmat4x4));
+            bufferMatrixList[bufferMatrixListLength].nearZ = matricesState.nearZ;
+            bufferMatrixList[bufferMatrixListLength].screenZ = matricesState.screenZ;
+            bufferMatrixList[bufferMatrixListLength].scale = matricesState.scale;
+            bufferMatrixList[bufferMatrixListLength].projectionUniform = shaderState.program->projectionUniform;
+
+            bufferMatrixListLength++;
         }
+
+        glUniformMatrix4fv(shaderState.program->projectionUniform, 1, GL_TRUE, (float*) matricesState.projection);
+        dirtyMatrices &= ~(1 << GL_PROJECTION);
+    }
+
+    /* modelview, on the other hand, is trivial */
+    if ((dirtyMatrices & (1 << GL_MODELVIEW)) && shaderState.program->modelviewUniform != -1)
+    {
+        glUniformMatrix4fv(shaderState.program->modelviewUniform, 1, GL_TRUE, (float*) matricesState.modelview);
+        dirtyMatrices &= ~(1 << GL_MODELVIEW);
     }
 }
 
-static void adjustBufferMatrices(mat4x4 transformation)
+static void adjustBufferMatrices(GLmat4x4 transformation, float axialShift)
 {
     int i;
     u32* buffer;
     u32 offset;
+
     GPUCMD_GetBuffer(&buffer, NULL, &offset);
 
     for (i = 0; i < bufferMatrixListLength; i++)
@@ -101,12 +113,20 @@ static void adjustBufferMatrices(mat4x4 transformation)
 
         if (o + 2 < offset) //TODO : better check, need to account for param size
         {
-            mat4x4 newMatrix;
+            const double frustumShift = axialShift * (bufferMatrixList[i].nearZ / bufferMatrixList[i].screenZ);
+            const float modelTranslation = axialShift;
+
+            transformation[0][2] = frustumShift * bufferMatrixList[i].scale;
+            transformation[0][3] = modelTranslation * bufferMatrixList[i].scale;
+
+            GLmat4x4 newMatrix;
             GPUCMD_SetBufferOffset(o);
+
             /* multiply original matrix uploaded in flushMatrices with the transformation matrix for this eye */
-            multMatrix4x4((float*) bufferMatrixList[i].data, (float*) transformation, (float*) newMatrix);
+            multMatrix4x4((float*) bufferMatrixList[i].projection, (float*) transformation, (float*) newMatrix);
+
             /* overwrite the right location in the command buffer */
-            glUniformMatrix4fv(matrixUniforms[GL_PROJECTION], 1, GL_TRUE, (float*) newMatrix);
+            glUniformMatrix4fv(bufferMatrixList[i].projectionUniform, 1, GL_TRUE, (float*) newMatrix);
         }
     }
 

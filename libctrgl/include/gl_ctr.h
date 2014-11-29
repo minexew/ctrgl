@@ -33,6 +33,8 @@
 #define NUM_TEXUNITS        3
 #define MAX_VERTEX_ATTRIBS  4
 
+typedef float GLmat4x4[4][4];
+
 /* **** TEXTURES **** */
 typedef struct
 {
@@ -109,6 +111,15 @@ GLdepthTestStateCTR;
 
 typedef struct
 {
+    GLmat4x4 projection;
+    GLmat4x4 modelview;
+
+    float nearZ, screenZ, scale;
+}
+GLmatricesStateCTR;
+
+typedef struct
+{
     GLprogramCTR* program;
 }
 GLshaderStateCTR;
@@ -129,8 +140,6 @@ typedef struct
 {
     GLboolean enabled   : 1;
     GLfloat interaxial;
-    GLfloat nearZ;
-    GLfloat screenZ;
 }
 GLstereoStateCTR;
 

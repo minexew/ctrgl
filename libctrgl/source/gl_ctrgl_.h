@@ -213,7 +213,7 @@ void ctrglFinishRendering()
             http://developer.download.nvidia.com/presentations/2009/GDC/GDC09-3DVision-The_In_and_Out.pdf
         */
 
-        mat4x4 adjustmentMatrix;
+        GLmat4x4 adjustmentMatrix;
         loadIdentity4x4((float*) adjustmentMatrix);
 
         //new and exciting 3D !
@@ -221,22 +221,15 @@ void ctrglFinishRendering()
         u32 offset; GPUCMD_GetBuffer(NULL, NULL, &offset);
         memcpy(gpuCmdRight, gpuCmd, offset*4);
 
-        double frustumShift = (stereoState.interaxial * 0.5f) * (stereoState.nearZ / stereoState.screenZ);
-        float modelTranslation = stereoState.interaxial * 0.5f;
-
         //adjust left gpu buffer fo 3D !
-        adjustmentMatrix[0][2] = frustumShift;
-        adjustmentMatrix[0][3] = modelTranslation;
-        adjustBufferMatrices(adjustmentMatrix);
+        adjustBufferMatrices(adjustmentMatrix, stereoState.interaxial * (0.5f));
 
         //draw left framebuffer
         GPUCMD_FlushAndRun(NULL);
 
         //while GPU starts drawing the left buffer, adjust right one for 3D !
         GPUCMD_SetBuffer(gpuCmdRight, gpuCmdSize, offset);
-        adjustmentMatrix[0][2] = -frustumShift;
-        adjustmentMatrix[0][3] = -modelTranslation;
-        adjustBufferMatrices(adjustmentMatrix);
+        adjustBufferMatrices(adjustmentMatrix, stereoState.interaxial * (-0.5f));
 
         //we wait for the left buffer to finish drawing
         gspWaitForP3D();

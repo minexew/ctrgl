@@ -134,6 +134,15 @@ void glDepthFunc(GLenum func);
 void glDepthMask(GLboolean flag);
 void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
+/* Matrices */
+void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
+void glProjectionMatrixfCTR(const GLfloat* m,
+        float nearZ,            /* \     used for stereoscopic rendering    */
+        float screenZ,          /*  |----  values are ignored otherwise     */
+        float scale             /* /    (see the example for explanation)   */
+        );
+void glModelviewMatrixfCTR(const GLfloat* m);
+
 /* Stencil */
 void glStencilFunc(GLenum func, GLint ref, GLuint mask);
 void glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass);
@@ -150,7 +159,8 @@ void glTexImage2D(GLenum target,    /* must be GL_TEXTURE_2D */
         GLint border,               /* must be 0 */
         GLenum format,              /* must be GL_BLOCK_RGBA_CTR */
         GLenum type,                /* must be GL_UNSIGNED_BYTE */
-        const GLvoid* data);
+        const GLvoid* data          /* may be NULL */
+        );
 
 GLuint glInitTextureCTR(GLtextureCTR* tex);
 void glShutdownTextureCTR(GLtextureCTR* tex);
@@ -218,14 +228,10 @@ void glVertexAttribCTR(GLuint index, GLint size, GLenum type);
 
 /* **** STEREO **** */
 void glStereoDisableCTR(void);
-void glStereoEnableCTR(GLfloat nearZ, GLfloat screenZ, GLfloat interaxial);
+void glStereoEnableCTR(GLfloat interaxial);
 
 /* **** DRAWING **** */
 void glDrawArrays(GLenum mode, GLint first, GLsizei count);
-
-/* **** NOT SORTED YET **** */
-void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
-void glDirectLoadMatrixfCTR(GLenum mode, const GLfloat* m);
 
 #ifdef __cplusplus
 }

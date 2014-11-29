@@ -34,8 +34,6 @@ typedef struct
     vect3Df_s normal;
 }vertex_s;
 
-static const float nearZ = 0.01f, farZ = 100.0f;
-
 //object data (cube)
 //obviously this doesn't have to be defined manually, but we will here for the purposes of the example
 //each line is a vertex : {position.x, position.y, position.z}, {texcoord.t, texcoord.s}, {normal.x, normal.y, normal.z}
@@ -99,39 +97,49 @@ const vertex_s modelVboData[]=
 
     // 2D overlay
         //first triangle
-        {(vect3Df_s){72.0f,  0.0f,  0.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){328.0f, 0.0f,  0.0f}, (float[]){1.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){328.0f, 64.0f, 0.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  0.0f,  2.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 0.0f,  2.0f}, (float[]){1.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 64.0f, 2.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
         //second triangle
-        {(vect3Df_s){328.0f, 64.0f, 0.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){72.0f,  64.0f, 0.0f}, (float[]){0.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){72.0f,  0.0f,  0.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 64.0f, 2.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  64.0f, 2.0f}, (float[]){0.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  0.0f,  2.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
 };
 
 static void set3DView()
 {
+    static const float nearZ = 0.01f, farZ = 100.0f;
     mtx44 projection, modelView;
 
     // standard perspective projection
     initProjectionMatrix((float*) projection, 80.0f*M_PI/180.0f, 240.0f/400.0f, nearZ, farZ);
     rotateMatrixZ((float*) projection, M_PI/2, false);   //because framebuffer is sideways...
-    glDirectLoadMatrixfCTR(GL_PROJECTION, (float*) projection);
+    glProjectionMatrixfCTR((float*) projection,
+            nearZ,  // must match the value passed to initProjectionMatrix
+
+            -5.0f,  // depth of the plane that will converge at screen depth in stereo,
+                    // e.g. everything further will be behind the screen, everything closer will pop out
+
+            0.2f    // determine experimentally; allows you to mix multiple views in one coherent stereo
+            );
 
     // poor man's camera control
     loadIdentity44((float*) modelView);
     translateMatrix((float*) modelView, position.x, position.y, position.z);
     rotateMatrixX((float*) modelView, angle.x, false);
     rotateMatrixY((float*) modelView, angle.y, false);
-    glDirectLoadMatrixfCTR(GL_MODELVIEW, (float*) modelView);
+    glModelviewMatrixfCTR((float*) modelView);
 }
 
 static void set2DView()
 {
+    static const float nearZ = 1.0f, farZ = 3.0f;
+
     mtx44 projection, modelView;
     loadIdentity44((float*) projection);
 
     // build an orthographic projection matrix accounting for the 3DS screen size and orientation
-    // currently this will always project at screen depth, even in stereo
+    // now in glorious 3D
 
     projection[0][0] = 0.0f;
     projection[0][1] = 1.0f / (240.0f * 0.5f);
@@ -141,16 +149,25 @@ static void set2DView()
     projection[1][1] = 0.0f;
     projection[1][3] = 1.0f;
 
-    projection[2][2] = 0.5f;
-    projection[2][3] = -0.5f;
+    projection[2][2] = 1.0f / (farZ - nearZ);
+    projection[2][3] = -0.5f - 0.5f * (farZ + nearZ) / (farZ - nearZ);
 
-    projection[3][3] = 1.0f;
+    glProjectionMatrixfCTR((float*) projection,
+            nearZ,
+            -1.0f,  // THIS IS A HACK
+                    // because ortho projection works differently than perspective,
+                    // we basically need to multiply the actual value by -1 to get
+                    // the right result
 
-    glDirectLoadMatrixfCTR(GL_PROJECTION, (float*) projection);
+            20.0f   // we need a much larger value here than in the perspective view,
+                    // because we're using screen-space coordinates
+                    // this could also be solved by doing the division in modelview
+                    // which is applied before stereo adjustment unlike projection
+            );
 
     // also reset modelView
     loadIdentity44((float*) modelView);
-    glDirectLoadMatrixfCTR(GL_MODELVIEW, (float*) modelView);
+    glModelviewMatrixfCTR((float*) modelView);
 
     // NOTE: we didn't bother resetting the lighting etc.
 }
@@ -271,7 +288,7 @@ int main(int argc, char** argv)
         float slider = CONFIG_3D_SLIDERSTATE;
 
         if (slider > 0.0f)
-            glStereoEnableCTR(slider * 0.12f, nearZ, -5.0f);
+            glStereoEnableCTR(slider);
         else
             glStereoDisableCTR();
 

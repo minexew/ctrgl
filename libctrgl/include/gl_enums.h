@@ -113,6 +113,7 @@ enum GLcaps
     GL_SHADER_PROGRAM_CTR = 0x00010000,
     GL_TEXTURING_CTR =      0x00020000,
     GL_VERTEX_ARRAYS_CTR =  0x00040000,
+    GL_MATRICES_CTR =       0x00080000,
 };
 
 enum GLcombineFunc
