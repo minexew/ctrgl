@@ -47,8 +47,11 @@ GLtextureCTR;
 typedef struct
 {
     DVLB_s* dvlb;
+
+    GLint projectionUniform;
+    GLint modelviewUniform;
 }
-GLshaderCTR;
+GLprogramCTR;
 
 /* **** VERTEX ARRAYS **** */
 typedef struct
@@ -105,7 +108,7 @@ GLdepthTestStateCTR;
 
 typedef struct
 {
-    DVLB_s* dvlb;
+    GLprogramCTR* program;
 }
 GLshaderStateCTR;
 

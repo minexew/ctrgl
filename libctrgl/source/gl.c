@@ -312,23 +312,25 @@ void glTexEnvubvCTR(GLenum target, GLenum pname, const GLubyte* params)
 /* **** SHADERS **** */
 GLuint glCreateProgram(void)
 {
-    GLshaderCTR* shader;
+    GLprogramCTR* prog;
 
-    shader = (GLshaderCTR*) malloc(sizeof(GLshaderCTR));
-    shader->dvlb = NULL;
+    prog = (GLprogramCTR*) malloc(sizeof(GLprogramCTR));
+    prog->dvlb = NULL;
+    prog->projectionUniform = -1;
+    prog->modelviewUniform = -1;
 
-    return (GLuint) shader;
+    return (GLuint) prog;
 }
 
 void glUseProgram(GLuint program)
 {
-    GLshaderCTR* shader;
+    GLprogramCTR* prog;
 
-    shader = (GLshaderCTR*) program;
-    shaderState.dvlb = shader->dvlb;
+    prog = (GLprogramCTR*) program;
+    shaderState.program = prog;
 
-    matrixUniforms[0] = glGetUniformLocation(program, "projection");
-    matrixUniforms[1] = glGetUniformLocation(program, "modelview");
+    matrixUniforms[0] = prog->projectionUniform;
+    matrixUniforms[1] = prog->modelviewUniform;
 
     dirtyState |= GL_SHADER_PROGRAM_CTR;
     dirtyMatrices = 0xff;
@@ -336,26 +338,29 @@ void glUseProgram(GLuint program)
 
 void glGetProgramDvlbCTR(GLuint program, DVLB_s** dvlb_out)
 {
-    GLshaderCTR* shader;
+    GLprogramCTR* prog;
 
-    shader = (GLshaderCTR*) program;
-    *dvlb_out = shader->dvlb;
+    prog = (GLprogramCTR*) program;
+    *dvlb_out = prog->dvlb;
 }
 
 GLint glGetUniformLocation(GLuint program, const GLchar* name)
 {
-    GLshaderCTR* shader;
+    GLprogramCTR* prog;
 
-    shader = (GLshaderCTR*) program;
-    return SHDR_GetUniformRegister(shader->dvlb, name, 0);
+    prog = (GLprogramCTR*) program;
+    return SHDR_GetUniformRegister(prog->dvlb, name, 0);
 }
 
 void glLoadProgramBinaryCTR(GLuint program, const void* shbin, GLsize size)
 {
-    GLshaderCTR* shader;
+    GLprogramCTR* prog;
 
-    shader = (GLshaderCTR*) program;
-    shader->dvlb = SHDR_ParseSHBIN((u32*) shbin, size);
+    prog = (GLprogramCTR*) program;
+    prog->dvlb = SHDR_ParseSHBIN((u32*) shbin, size);
+
+    prog->projectionUniform = glGetUniformLocation(program, "projection");
+    prog->modelviewUniform = glGetUniformLocation(program, "modelview");
 }
 
 void glUniform4fv(GLint location, GLsizei count, const GLfloat* value)

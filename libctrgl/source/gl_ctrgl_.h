@@ -50,7 +50,7 @@ void ctrglInit(void)
     depthTestState.mask = GL_TRUE;
     depthTestState.colorMask = 0x0f;
 
-    shaderState.dvlb = NULL;
+    shaderState.program = NULL;
 
     stereoState.enabled = GL_FALSE;
 

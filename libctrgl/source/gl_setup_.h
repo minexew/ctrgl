@@ -69,7 +69,7 @@ static void setUpShaders()
     DVLB_s* dvlb;
     DVLE_s* dvle;
 
-    dvlb = shaderState.dvlb;
+    dvlb = shaderState.program->dvlb;
     dvle = &dvlb->DVLE[0];
 
     /* geometry shader related? */
