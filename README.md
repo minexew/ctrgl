@@ -8,7 +8,7 @@ Special thanks to Smealum for blessing us with code exec in the first place.
 
 B-but muh documentation
 ----
-RTFH.
+[RTFH](https://github.com/minexew/ctrgl/blob/master/libctrgl/include/gl.h).
 
 How does this work?
 ----
