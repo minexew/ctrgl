@@ -1,6 +1,8 @@
 ctrGL - a far-from-complete OpenGL implementation for the POS PICA
 =====
 
+![Screenshot](http://i.imgur.com/Hijdy6J.png)
+
 Heavily based on code from [ctrulib](https://github.com/smealum/ctrulib).
 
 This project would never have been possible without all the great people behind 3Dbrew and ctrulib.
