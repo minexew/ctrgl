@@ -35,6 +35,14 @@
 
 typedef float GLmat4x4[4][4];
 
+typedef enum
+{
+    GL_STEREO_NONE_CTR,
+    GL_STEREO_PERSPECTIVE_CTR,
+    GL_STEREO_ORTHO_CTR,
+}
+GLstereoModeCTR;
+
 /* **** TEXTURES **** */
 typedef struct
 {
@@ -114,7 +122,24 @@ typedef struct
     GLmat4x4 projection;
     GLmat4x4 modelview;
 
-    float nearZ, screenZ, scale;
+    GLstereoModeCTR stereoMode;
+    float screenZ;
+
+    union
+    {
+        struct
+        {
+            float skew;
+        }
+        ortho;
+
+        struct
+        {
+            float nearZ, scale;
+        }
+        perspective;
+    }
+    stereoParams;
 }
 GLmatricesStateCTR;
 

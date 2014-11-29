@@ -34,8 +34,7 @@
 typedef struct
 {
     u32 offset;
-    GLmat4x4 projection;
-    float nearZ, screenZ, scale;
+    GLmatricesStateCTR matrices;
     GLint projectionUniform;
 }
 bufferMatrix_s;
@@ -78,10 +77,7 @@ static void flushMatrices()
             GPUCMD_GetBuffer(NULL, NULL, &bufferMatrixList[bufferMatrixListLength].offset);
 
             /* remember the settings */
-            memcpy(bufferMatrixList[bufferMatrixListLength].projection, matricesState.projection, sizeof(GLmat4x4));
-            bufferMatrixList[bufferMatrixListLength].nearZ = matricesState.nearZ;
-            bufferMatrixList[bufferMatrixListLength].screenZ = matricesState.screenZ;
-            bufferMatrixList[bufferMatrixListLength].scale = matricesState.scale;
+            memcpy(&bufferMatrixList[bufferMatrixListLength].matrices, &matricesState, sizeof(GLmatricesStateCTR));
             bufferMatrixList[bufferMatrixListLength].projectionUniform = shaderState.program->projectionUniform;
 
             bufferMatrixListLength++;
@@ -113,17 +109,34 @@ static void adjustBufferMatrices(GLmat4x4 transformation, float axialShift)
 
         if (o + 2 < offset) //TODO : better check, need to account for param size
         {
-            const double frustumShift = axialShift * (bufferMatrixList[i].nearZ / bufferMatrixList[i].screenZ);
-            const float modelTranslation = axialShift;
+            const GLmatricesStateCTR* st = &bufferMatrixList[i].matrices;
 
-            transformation[0][2] = frustumShift * bufferMatrixList[i].scale;
-            transformation[0][3] = modelTranslation * bufferMatrixList[i].scale;
+            if (st->stereoMode == GL_STEREO_NONE_CTR)
+                continue;
+
+            if (st->stereoMode == GL_STEREO_PERSPECTIVE_CTR)
+            {
+                const float frustumShift = axialShift * (st->stereoParams.perspective.nearZ / st->screenZ);
+                const float modelTranslation = axialShift;
+
+                transformation[0][2] = frustumShift * st->stereoParams.perspective.scale;
+                transformation[0][3] = modelTranslation * st->stereoParams.perspective.scale;
+            }
+            else
+            {
+                const float frustumShift = -axialShift * st->stereoParams.ortho.skew;
+                /*const float modelTranslation = axialShift * (st->screenZ * st->stereoParams.ortho.skew);*/
+                const float modelTranslation = -frustumShift * st->screenZ;
+
+                transformation[0][2] = frustumShift;
+                transformation[0][3] = modelTranslation;
+            }
 
             GLmat4x4 newMatrix;
             GPUCMD_SetBufferOffset(o);
 
             /* multiply original matrix uploaded in flushMatrices with the transformation matrix for this eye */
-            multMatrix4x4((float*) bufferMatrixList[i].projection, (float*) transformation, (float*) newMatrix);
+            multMatrix4x4((float*) bufferMatrixList[i].matrices.projection, (float*) transformation, (float*) newMatrix);
 
             /* overwrite the right location in the command buffer */
             glUniformMatrix4fv(bufferMatrixList[i].projectionUniform, 1, GL_TRUE, (float*) newMatrix);

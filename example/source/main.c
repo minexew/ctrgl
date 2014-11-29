@@ -97,13 +97,13 @@ const vertex_s modelVboData[]=
 
     // 2D overlay
         //first triangle
-        {(vect3Df_s){72.0f,  0.0f,  2.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){328.0f, 0.0f,  2.0f}, (float[]){1.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){328.0f, 64.0f, 2.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  0.0f,  1.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 0.0f,  1.0f}, (float[]){1.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 64.0f, 1.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
         //second triangle
-        {(vect3Df_s){328.0f, 64.0f, 2.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){72.0f,  64.0f, 2.0f}, (float[]){0.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
-        {(vect3Df_s){72.0f,  0.0f,  2.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){328.0f, 64.0f, 1.0f}, (float[]){1.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  64.0f, 1.0f}, (float[]){0.0f, 1.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
+        {(vect3Df_s){72.0f,  0.0f,  1.0f}, (float[]){0.0f, 0.0f}, (vect3Df_s){0.0f, 0.0f, +1.0f}},
 };
 
 static void set3DView()
@@ -114,7 +114,7 @@ static void set3DView()
     // standard perspective projection
     initProjectionMatrix((float*) projection, 80.0f*M_PI/180.0f, 240.0f/400.0f, nearZ, farZ);
     rotateMatrixZ((float*) projection, M_PI/2, false);   //because framebuffer is sideways...
-    glProjectionMatrixfCTR((float*) projection,
+    glPerspectiveProjectionMatrixfCTR((float*) projection,
             nearZ,  // must match the value passed to initProjectionMatrix
 
             -5.0f,  // depth of the plane that will converge at screen depth in stereo,
@@ -133,7 +133,7 @@ static void set3DView()
 
 static void set2DView()
 {
-    static const float nearZ = 1.0f, farZ = 3.0f;
+    static const float nearZ = -1.0f, farZ = 1.0f;
 
     mtx44 projection, modelView;
     loadIdentity44((float*) projection);
@@ -152,17 +152,13 @@ static void set2DView()
     projection[2][2] = 1.0f / (farZ - nearZ);
     projection[2][3] = -0.5f - 0.5f * (farZ + nearZ) / (farZ - nearZ);
 
-    glProjectionMatrixfCTR((float*) projection,
-            nearZ,
-            -1.0f,  // THIS IS A HACK
-                    // because ortho projection works differently than perspective,
-                    // we basically need to multiply the actual value by -1 to get
-                    // the right result
+    glOrthoProjectionMatrixfCTR((float*) projection,
+            20.0f,      // units of X (in our case pixels) per a unit of Z*interaxial
+                        // e.g. 20.0f means a point at z=1.0 will be drawn
+                        // with a stereo separation of x=20 if interaxial=1.0,
+                        // a point at z=0.5 with a separation of x=10 etc.
 
-            20.0f   // we need a much larger value here than in the perspective view,
-                    // because we're using screen-space coordinates
-                    // this could also be solved by doing the division in modelview
-                    // which is applied before stereo adjustment unlike projection
+            1.0f        // screen depth again, in eye space Z (can be 0, unlike in perspective)
             );
 
     // also reset modelView

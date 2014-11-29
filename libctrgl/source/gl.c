@@ -609,12 +609,33 @@ void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m)
         memcpy(m, matricesState.modelview, sizeof(GLmat4x4));
 }
 
-void glProjectionMatrixfCTR(const GLfloat* m, float nearZ, float screenZ, float scale)
+void glProjectionMatrixfCTR(const GLfloat* m)
 {
     memcpy(matricesState.projection, m, sizeof(GLmat4x4));
-    matricesState.nearZ = nearZ;
+    matricesState.stereoMode = GL_STEREO_NONE_CTR;
+
+    dirtyState |= GL_MATRICES_CTR;
+    dirtyMatrices |= (1 << GL_PROJECTION);
+}
+
+void glOrthoProjectionMatrixfCTR(const GLfloat* m, float skew, float screenZ)
+{
+    memcpy(matricesState.projection, m, sizeof(GLmat4x4));
+    matricesState.stereoMode = GL_STEREO_ORTHO_CTR;
     matricesState.screenZ = screenZ;
-    matricesState.scale = scale;
+    matricesState.stereoParams.ortho.skew = skew;
+
+    dirtyState |= GL_MATRICES_CTR;
+    dirtyMatrices |= (1 << GL_PROJECTION);
+}
+
+void glPerspectiveProjectionMatrixfCTR(const GLfloat* m, float nearZ, float screenZ, float scale)
+{
+    memcpy(matricesState.projection, m, sizeof(GLmat4x4));
+    matricesState.stereoMode = GL_STEREO_PERSPECTIVE_CTR;
+    matricesState.screenZ = screenZ;
+    matricesState.stereoParams.perspective.nearZ = nearZ;
+    matricesState.stereoParams.perspective.scale = scale;
 
     dirtyState |= GL_MATRICES_CTR;
     dirtyMatrices |= (1 << GL_PROJECTION);

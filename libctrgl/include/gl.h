@@ -135,12 +135,23 @@ void glDepthMask(GLboolean flag);
 void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 /* Matrices */
+/* Because of differences between perspective and orthographic projection,
+ * separate functions are needed to cover all cases
+ */
 void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
-void glProjectionMatrixfCTR(const GLfloat* m,
+/
+void glProjectionMatrixfCTR(const GLfloat* m);              /* any projection, no stereo */
+
+void glPerspectiveProjectionMatrixfCTR(const GLfloat* m,    /* stereo-enabled perspective */
         float nearZ,            /* \     used for stereoscopic rendering    */
         float screenZ,          /*  |----  values are ignored otherwise     */
         float scale             /* /    (see the example for explanation)   */
         );
+void glOrthoProjectionMatrixfCTR(const GLfloat* m,          /* stereo-enabled orthographic */
+        float skew,             /* units of X per unit of Z at interaxial=1.0 */
+        float screenZ           /* Z value where views will converge */
+        );
+
 void glModelviewMatrixfCTR(const GLfloat* m);
 
 /* Stencil */
