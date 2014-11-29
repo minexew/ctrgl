@@ -164,6 +164,7 @@ void glTexEnvubvCTR(GLenum target,  /* must be GL_TEXTURE_ENV */
 
 /* **** SHADERS **** */
 GLuint glCreateProgram(void);
+void glDeleteProgram(GLuint program);
 void glUseProgram(GLuint program);
 GLint glGetUniformLocation(GLuint program, const GLchar* name);
 
@@ -172,6 +173,8 @@ void glUniformMatrix4fv(GLint location, GLsizei count,
         GLboolean transpose,        /* must be GL_TRUE */
         const GLfloat* value);
 
+GLuint glInitProgramCTR(GLprogramCTR* prog);
+void glShutdownProgramCTR(GLprogramCTR* prog);
 void glLoadProgramBinaryCTR(GLuint program, const void* shbin, GLsize size);
 void glGetProgramDvlbCTR(GLuint program, DVLB_s** dvlb_out);
 
