@@ -204,6 +204,30 @@ void glBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum d
 }
 
 /* **** TEXTURES **** */
+GLuint glInitTextureCTR(GLtextureCTR* tex)
+{
+    tex->w = 0;
+    tex->h = 0;
+    tex->data = NULL;
+
+    return (GLuint) tex;
+}
+
+void glShutdownTextureCTR(GLtextureCTR* tex)
+{
+    int i;
+
+    for (i = 0; i < NUM_TEXUNITS; i++)
+        if (tex == texturingState.texUnits[i].boundTexture)
+        {
+            texturingState.texUnits[i].boundTexture = NULL;
+            dirtyState |= GL_TEXTURING_CTR;
+            dirtyTexUnits |= (1 << i);
+        }
+
+    linearFree(tex->data);
+}
+
 void glGenTextures(GLsizei n, GLuint* textures)
 {
     GLtextureCTR* tex;
@@ -211,9 +235,7 @@ void glGenTextures(GLsizei n, GLuint* textures)
     while (n-- > 0)
     {
         tex = (GLtextureCTR*) malloc(sizeof(GLtextureCTR));
-        tex->w = 0;
-        tex->h = 0;
-        tex->data = 0;
+        glInitTextureCTR(tex);
 
         *textures = (GLuint) tex;
         textures++;
@@ -223,7 +245,6 @@ void glGenTextures(GLsizei n, GLuint* textures)
 void glDeleteTextures(GLsizei n, const GLuint* textures)
 {
     GLtextureCTR* tex;
-    int i;
 
     for (; n > 0; n--, textures++)
     {
@@ -232,15 +253,7 @@ void glDeleteTextures(GLsizei n, const GLuint* textures)
         if (tex == NULL)
             continue;
 
-        for (i = 0; i < NUM_TEXUNITS; i++)
-            if (tex == texturingState.texUnits[i].boundTexture)
-            {
-                texturingState.texUnits[i].boundTexture = NULL;
-                dirtyState |= GL_TEXTURING_CTR;
-                dirtyTexUnits |= (1 << i);
-            }
-
-        linearFree(tex->data);
+        glShutdownTextureCTR(tex);
         free(tex);
     }
 }
@@ -310,16 +323,47 @@ void glTexEnvubvCTR(GLenum target, GLenum pname, const GLubyte* params)
 }
 
 /* **** SHADERS **** */
-GLuint glCreateProgram(void)
+GLuint glInitProgramCTR(GLprogramCTR* prog)
 {
-    GLprogramCTR* prog;
-
-    prog = (GLprogramCTR*) malloc(sizeof(GLprogramCTR));
     prog->dvlb = NULL;
     prog->projectionUniform = -1;
     prog->modelviewUniform = -1;
 
     return (GLuint) prog;
+}
+
+void glShutdownProgramCTR(GLprogramCTR* prog)
+{
+    if (shaderState.program == prog)
+    {
+        shaderState.program = NULL;
+        dirtyState |= GL_SHADER_PROGRAM_CTR;
+    }
+
+    SHDR_FreeDVLB(prog->dvlb);
+}
+
+GLuint glCreateProgram(void)
+{
+    GLprogramCTR* prog;
+
+    prog = (GLprogramCTR*) malloc(sizeof(GLprogramCTR));
+    glInitProgramCTR(prog);
+
+    return (GLuint) prog;
+}
+
+void glDeleteProgram(GLuint program)
+{
+    GLprogramCTR* prog;
+
+    prog = (GLprogramCTR*) program;
+
+    if (prog == NULL)
+        return;
+
+    glShutdownProgramCTR(prog);
+    free(prog);
 }
 
 void glUseProgram(GLuint program)
@@ -419,6 +463,22 @@ void glVertexAttribCTR(GLuint index, GLint size, GLenum type)
 }
 
 /* **** BUFFERS **** */
+GLuint glInitBufferCTR(GLbufferCTR* buf)
+{
+    buf->data = NULL;
+    buf->size = 0;
+
+    return (GLuint) buf;
+}
+
+void glShutdownBufferCTR(GLbufferCTR* buf)
+{
+    if (buf == boundBuffer)
+        boundBuffer = NULL;
+
+    linearFree(buf->data);
+}
+
 void glGenBuffers(GLsizei n, GLuint* buffers)
 {
     GLbufferCTR* buf;
@@ -426,8 +486,7 @@ void glGenBuffers(GLsizei n, GLuint* buffers)
     while (n-- > 0)
     {
         buf = (GLbufferCTR*) malloc(sizeof(GLbufferCTR));
-        buf->data = NULL;
-        buf->size = 0;
+        glInitBufferCTR(buf);
 
         *buffers = (GLuint) buf;
         buffers++;
@@ -445,10 +504,7 @@ void glDeleteBuffers(GLsizei n, const GLuint* buffers)
         if (buf == NULL)
             continue;
 
-        if (buf == boundBuffer)
-            boundBuffer = NULL;
-
-        linearFree(buf->data);
+        glShutdownBufferCTR(buf);
         free(buf);
     }
 }

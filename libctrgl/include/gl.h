@@ -33,6 +33,26 @@
  *    Special thanks to Smealum for blessing us with code exec in the first place.
  */
 
+/*
+ *  NOTE: Functions such as glInitBufferCTR and glShutdownBufferCTR (also called "direct resource access")
+ *      can be used to avoid an additional memory allocation done by their glGen* and glCreate* equivalents.
+ *      This makes code a tiny bit more efficient at the cost of diverging from OpenGL, which may or may not
+ *      be an acceptable trade-off for your application.
+ *      With the correct compiler and linker flags, the allocating variants of the functions, if not used by
+ *      your program, will not be linked in at all, thereby slightly reducing code size.
+ *
+ *      glInit*CTR takes a pointer to a user-allocated data structure and returns a value to be used
+ *      with regular GL functions for that class of resource. This value is guaranteed to be the same
+ *      as the provided pointer, cast to GLuint.
+ *
+ *      Similarly, glShutdown*CTR releases all data allocated by the resource, but leaves the actual structure
+ *      intact.
+ *
+ *      If you decide to use these functions, you take on the responsibility to keep you code in sync,
+ *      as a breakage may happen anytime. This especially applies to accessing the structure fields directly.
+ *      Oh, and as always, no NULL checks are being done, in the ctrGL spirit of "crash early, crash often".
+ */
+
 #ifndef CTRGL_H
 #define CTRGL_H
 
@@ -132,6 +152,8 @@ void glTexImage2D(GLenum target,    /* must be GL_TEXTURE_2D */
         GLenum type,                /* must be GL_UNSIGNED_BYTE */
         const GLvoid* data);
 
+GLuint glInitTextureCTR(GLtextureCTR* tex);
+void glShutdownTextureCTR(GLtextureCTR* tex);
 void glNamedTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
         GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type,
         const GLvoid* data);        /* arguments: see glTexImage2D */
@@ -183,6 +205,9 @@ void* glMapNamedBufferRange(GLuint buffer,
 
 GLboolean glUnmapBuffer(GLenum target);
 GLboolean glUnmapNamedBuffer(GLuint buffer);
+
+GLuint glInitBufferCTR(GLbufferCTR* buf);
+void glShutdownBufferCTR(GLbufferCTR* buf);
 
 /* **** VERTEX ARRAYS **** */
 void glVertexFormatCTR(GLuint numAttribs, GLuint vertexSize);

@@ -61,6 +61,14 @@ typedef struct
 }
 GLvertexAttribCTR;
 
+/* **** VERTEX BUFFERS **** */
+typedef struct
+{
+    void* data;
+    size_t size;
+}
+GLbufferCTR;
+
 /* **** STATE **** */
 
 typedef struct
@@ -83,13 +91,6 @@ typedef struct
     GLenum dstAlpha     : 4;
 }
 GLblendStateCTR;
-
-typedef struct
-{
-    void* data;
-    size_t size;
-}
-GLbufferCTR;
 
 typedef struct
 {
