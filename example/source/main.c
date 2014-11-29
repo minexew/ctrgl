@@ -219,7 +219,7 @@ int main(int argc, char** argv)
 
     // load the vertex shader
     program = glCreateProgram();
-    glLoadProgramBinaryCTR(program, test_vsh_shbin, test_vsh_shbin_size);
+    glLoadProgramBinary2CTR(program, (void*) test_vsh_shbin, test_vsh_shbin_size, GL_MEMORY_STATIC_CTR);
     glUseProgram(program);
 
     lightDirection = glGetUniformLocation(program, "lightDirection");

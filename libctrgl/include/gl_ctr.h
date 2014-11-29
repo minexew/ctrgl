@@ -57,6 +57,7 @@ GLtextureCTR;
 typedef struct
 {
     DVLB_s* dvlb;
+    void* shbin;
 
     GLint projectionUniform;
     GLint modelviewUniform;

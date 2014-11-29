@@ -323,6 +323,7 @@ void glTexEnvubvCTR(GLenum target, GLenum pname, const GLubyte* params)
 GLuint glInitProgramCTR(GLprogramCTR* prog)
 {
     prog->dvlb = NULL;
+    prog->shbin = NULL;
     prog->projectionUniform = -1;
     prog->modelviewUniform = -1;
 
@@ -338,6 +339,7 @@ void glShutdownProgramCTR(GLprogramCTR* prog)
     }
 
     SHDR_FreeDVLB(prog->dvlb);
+    free(prog->shbin);
 }
 
 GLuint glCreateProgram(void)
@@ -392,9 +394,24 @@ GLint glGetUniformLocation(GLuint program, const GLchar* name)
 
 void glLoadProgramBinaryCTR(GLuint program, const void* shbin, GLsize size)
 {
+    glLoadProgramBinary2CTR(program, (void*) shbin, size, GL_MEMORY_COPY_CTR);
+}
+
+void glLoadProgramBinary2CTR(GLuint program, void* shbin, GLsize size, GLmemoryTransferModeCTR shbinMode)
+{
     GLprogramCTR* prog;
 
     prog = (GLprogramCTR*) program;
+
+    if (shbinMode == GL_MEMORY_COPY_CTR)
+    {
+        prog->shbin = malloc(size);
+        memcpy(prog->shbin, shbin, size);
+        shbin = prog->shbin;
+    }
+    else if (shbinMode == GL_MEMORY_TRANSFER_CTR)
+        prog->shbin = shbin;
+
     prog->dvlb = SHDR_ParseSHBIN((u32*) shbin, size);
 
     prog->projectionUniform = glGetUniformLocation(program, "projection");

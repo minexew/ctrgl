@@ -209,3 +209,13 @@ enum GLtype
     GL_SHORT =          2,
     GL_FLOAT =          3,
 };
+
+/* CTR extensions */
+
+typedef enum
+{
+    GL_MEMORY_STATIC_CTR,
+    GL_MEMORY_COPY_CTR,
+    GL_MEMORY_TRANSFER_CTR,
+}
+GLmemoryTransferModeCTR;

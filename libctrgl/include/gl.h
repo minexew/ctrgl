@@ -53,6 +53,22 @@
  *      Oh, and as always, no NULL checks are being done, in the ctrGL spirit of "crash early, crash often".
  */
 
+/*
+ *  Explanation of GLmemoryTransferModeCTR:
+ *    - GL_MEMORY_STATIC_CTR means to use the provided pointer without performing any memory management.
+ *        Use this if you can guarantee that the memory block will stay valid for the lifetime of the resource,
+ *        for example when the data is directly linked into your program.
+ *
+ *    - GL_MEMORY_COPY_CTR instructs ctrGL to make a private copy of the provided data and manage it on its own.
+ *
+ *    - GL_MEMORY_TRANSFER_CTR transfers the ownership of the memory block to ctrGL. The memory block must have
+ *        been allocated using 'malloc' and ctrGL will 'free' it when the resource is released.
+ *        All pointers to this memory block should be treated as invalid after calling a function with
+ *        this argument.
+ *
+ *    When in doubt, use GL_MEMORY_COPY_CTR.
+ */
+
 #ifndef CTRGL_H
 #define CTRGL_H
 
@@ -139,7 +155,7 @@ void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha
  * separate functions are needed to cover all cases
  */
 void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m);
-/
+
 void glProjectionMatrixfCTR(const GLfloat* m);              /* any projection, no stereo */
 
 void glPerspectiveProjectionMatrixfCTR(const GLfloat* m,    /* stereo-enabled perspective */
@@ -196,7 +212,12 @@ void glUniformMatrix4fv(GLint location, GLsizei count,
 
 GLuint glInitProgramCTR(GLprogramCTR* prog);
 void glShutdownProgramCTR(GLprogramCTR* prog);
+
+/* do not call this function more than once per program */
 void glLoadProgramBinaryCTR(GLuint program, const void* shbin, GLsize size);
+void glLoadProgramBinary2CTR(GLuint program, void* shbin, GLsize size,
+        GLmemoryTransferModeCTR shbinMode);
+
 void glGetProgramDvlbCTR(GLuint program, DVLB_s** dvlb_out);
 
 /* **** VERTEX BUFFERS **** */
