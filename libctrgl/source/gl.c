@@ -637,7 +637,7 @@ void glDrawArrays(GLenum mode, GLint first, GLsizei count)
         _GPUCMD_AddRawCommands(vbo->commands, vbo->commandsSize);
     }else{*/
         // TODO: cache VBO phys address
-        gpuDrawArrayDirectly(GPU_TRIANGLES, (u8*) boundBuffer->data + first * vertexArraysState.vertexSize, count);
+        gpuDrawArrayDirectly(mode, (u8*) boundBuffer->data + first * vertexArraysState.vertexSize, count);
     //}
     // debugValue[5]+=(u32)(svcGetSystemTick()-val);
     // debugValue[6]++;
