@@ -154,11 +154,11 @@ static void set2DView()
 
     glOrthoProjectionMatrixfCTR((float*) projection,
             20.0f,      // units of X (in our case pixels) per a unit of Z*interaxial
-                        // e.g. 20.0f means a point at z=1.0 will be drawn
-                        // with a stereo separation of x=20 if interaxial=1.0,
-                        // a point at z=0.5 with a separation of x=10 etc.
+                        // e.g. 20.0 means a point at distance z=1.0 from screen plane
+                        // will be drawn with a stereo separation of x=20 (if interaxial=1.0),
+                        // a point at distance z=0.5 with a separation of x=10 etc.
 
-            1.0f        // screen depth again, in eye space Z (can be 0, unlike in perspective)
+            1.0f        // screen plane Z again, in eye space (can be <= 0, unlike in perspective)
             );
 
     // also reset modelView
