@@ -26,6 +26,8 @@ float lightAngle;
 //object position and rotation angle
 vect3Df_s position, angle;
 
+static int gpuCrashed = 0;
+
 //vertex structure
 typedef struct
 {
@@ -158,7 +160,7 @@ static void set2DView()
                         // will be drawn with a stereo separation of x=20 (if interaxial=1.0),
                         // a point at distance z=0.5 with a separation of x=10 etc.
 
-            1.0f        // screen plane Z again, in eye space (can be <= 0, unlike in perspective)
+            0.0f        // screen plane Z again, in eye space (can be <= 0, unlike in perspective)
             );
 
     // also reset modelView
@@ -189,6 +191,13 @@ void renderFrame()
     glDrawArrays(GL_TRIANGLES, 6 * 2 * 3, 2 * 3);
 }
 
+static void ctrglOnTimeout(CTRGLtimeoutType type)
+{
+    // something went wrong
+
+    gpuCrashed = 1;
+}
+
 int main(int argc, char** argv)
 {
     // init services
@@ -207,6 +216,10 @@ int main(int argc, char** argv)
     ctrglInit();
     ctrglAllocateCommandBuffers(0x40000, 2);
     ctrglResetGPU();
+
+    // if the GPU doesn't finish rendering in 200ms, we might as well consider it ded
+    ctrglSetTimeout(CTRGL_TIMEOUT_P3D, 200 * 1000 * 1000);
+    ctrglSetTimeoutHandler(ctrglOnTimeout);
 
     // basic OpenGL settings
     glEnable(GL_CULL_FACE);
@@ -276,6 +289,15 @@ int main(int argc, char** argv)
         if(keysHeld()&KEY_R)position.z+=0.1f;
         if(keysHeld()&KEY_L)position.z-=0.1f;
 
+        // press X for crasherino!
+        if (keysHeld() & KEY_X)
+        {
+            // this should f*** up the GPU good
+            static uint32_t nan[] = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
+
+            glBufferSubData(GL_ARRAY_BUFFER, 0, 16, &nan);      // oops sry
+        }
+
         // NOTE: no actual rendering is being done yet, just writing commands into a buffer
         ctrglBeginRendering();
 
@@ -290,6 +312,17 @@ int main(int argc, char** argv)
 
         // finally send rendering commands to the GPU
         ctrglFinishRendering();
+
+        if (gpuCrashed)
+        {
+            // we could display an error message by writing directly to the framebuffer
+            // or even try to recover by resetting the GPU (ctrglResetGPU doesn't cut it)
+
+            // also note that no GPU-enabled applications will work until the system is restarted
+            // (patches are welcome)
+
+            break;
+        }
     }
 
     glDeleteBuffers(1, &vbuf);
