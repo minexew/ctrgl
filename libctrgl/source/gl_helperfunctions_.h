@@ -28,6 +28,8 @@
 #error This is a private CTRGL implementation file. Please use #include <gl.h> instead.
 #endif
 
+extern Handle gspEvents[GSPEVENT_MAX];
+
 static u32 f32tof24(float f)
 {
     if(!f)return 0;
@@ -106,4 +108,14 @@ static void gpuSetTexture(int unit, void* data, u16 width, u16 height, u32 param
             GPUCMD_AddSingleParam(0x000F009B, param);
             break;
     }
+}
+
+void waitEvent(int gspEventId, CTRGLtimeoutType timeoutType)
+{
+    s32 ret = svcWaitSynchronization(gspEvents[gspEventId], timeout[timeoutType]);
+
+    if (ret == 0)
+        svcClearEvent(gspEvents[gspEventId]);
+    else if (timeoutHandler)
+        timeoutHandler(timeoutType);
 }

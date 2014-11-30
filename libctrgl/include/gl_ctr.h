@@ -214,4 +214,6 @@ typedef struct
 }
 GLvertexArraysStateCTR;
 
+typedef void (*CTRGLtimeoutHandler)(CTRGLtimeoutType type);
+
 #endif

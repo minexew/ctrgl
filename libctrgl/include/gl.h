@@ -118,6 +118,10 @@ void ctrglAllocateCommandBuffers(GLsize size,
         GLuint count            /* must be 1 or 2 */
         );
 void ctrglGetCommandBuffers(u32* size, u32** gpuCmd, u32** gpuCmdRight);
+void ctrglGetCommandBufferUtilization(u32* size, u32* used);
+void ctrglSetTimeout(CTRGLtimeoutType type, u64 nanoseconds);
+void ctrglSetTimeoutHandler(CTRGLtimeoutHandler handler);
+void ctrglSetVsyncWait(GLboolean enabled);      /* enabled by default */
 
 void ctrglResetGPU(void);
 void ctrglBeginRendering(void);

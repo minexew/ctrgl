@@ -55,6 +55,9 @@ static GLvertexArraysStateCTR   vertexArraysState;
 
 static GLbufferCTR* boundBuffer;
 static u32 clearColor;
+static GLboolean vsyncWait;
+static u64 timeout[CTRGL_TIMEOUT_MAX_];
+static CTRGLtimeoutHandler timeoutHandler;
 
 static uint32_t dirtyState;
 static uint32_t enableState;
@@ -370,6 +373,10 @@ void glUseProgram(GLuint program)
     GLprogramCTR* prog;
 
     prog = (GLprogramCTR*) program;
+
+    if (shaderState.program == prog)
+        return;
+
     shaderState.program = prog;
 
     dirtyState |= (GL_SHADER_PROGRAM_CTR | GL_MATRICES_CTR);

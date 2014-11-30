@@ -219,3 +219,12 @@ typedef enum
     GL_MEMORY_TRANSFER_CTR,
 }
 GLmemoryTransferModeCTR;
+
+typedef enum
+{
+    CTRGL_TIMEOUT_P3D,
+    CTRGL_TIMEOUT_PPF,
+    CTRGL_TIMEOUT_PSC0,
+    CTRGL_TIMEOUT_MAX_
+}
+CTRGLtimeoutType;
