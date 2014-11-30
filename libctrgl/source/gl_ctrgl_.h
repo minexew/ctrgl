@@ -171,6 +171,11 @@ void ctrglSetTimeoutHandler(CTRGLtimeoutHandler handler)
     timeoutHandler = handler;
 }
 
+void ctrglSetVsyncWait(GLboolean enabled)
+{
+    vsyncWait = enabled;
+}
+
 void ctrglBeginRendering(void)
 {
     dirtyState |= (GL_CULL_FACE | GL_STENCIL_TEST | GL_BLEND | GL_ALPHA_TEST | GL_DEPTH_TEST
