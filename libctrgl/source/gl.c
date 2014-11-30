@@ -317,9 +317,22 @@ void glNamedTexImage2DCTR(GLuint texture, GLint level, GLint internalFormat,
 
 void glTexEnvubvCTR(GLenum target, GLenum pname, const GLubyte* params)
 {
-    memcpy(&texturingState.env[texturingState.activeTexture].primaryColor, params, 4);
+    memcpy(&texturingState.env[texturingState.activeTexture].constant, params, 4);
     dirtyState |= GL_TEXTURING_CTR;
     dirtyTexEnv |= (1 << texturingState.activeTexture);
+}
+
+void glTexEnvi(GLenum target, GLenum pname, GLint param)
+{
+    switch (pname)
+    {
+        case GL_SRC0_RGB: texturingState.env[0].src0RGB = param; break;
+        case GL_SRC1_RGB: texturingState.env[0].src1RGB = param; break;
+        case GL_SRC2_RGB: texturingState.env[0].src2RGB = param; break;
+    }
+
+    dirtyState |= GL_TEXTURING_CTR;
+    dirtyTexEnv |= 1;
 }
 
 /* **** SHADERS **** */

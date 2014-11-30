@@ -144,7 +144,7 @@ static void setUpTexturing()
         param[0x0] = (alphaSources << 16) | rgbSources;
         param[0x1] = (alphaOperands << 12) | rgbOperands;
         param[0x2] = (env->combineAlpha << 16) | env->combineRGB;
-        param[0x3] = env->primaryColor;
+        param[0x3] = env->constant;
         param[0x4] = 0x00000000;        /* unused */
 
         GPUCMD_Add(0x800F0000 | GPU_TEVID[i], param, 0x00000005);

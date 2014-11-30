@@ -60,7 +60,7 @@ void ctrglInit(void)
     texturingState.enableTextures = 0;
 
     /* TODO: are these correct GL defaults? */
-    texturingState.env[0].primaryColor = 0xffffffff;
+    texturingState.env[0].constant = 0xffffffff;
     texturingState.env[0].combineRGB = GL_MODULATE;
     texturingState.env[0].combineAlpha = GL_MODULATE;
     texturingState.env[0].src0RGB = GL_TEXTURE0;
@@ -78,7 +78,7 @@ void ctrglInit(void)
 
     for (i = 1; i < NUM_TEXENV; i++)
     {
-        texturingState.env[i].primaryColor = 0xffffffff;
+        texturingState.env[i].constant = 0xffffffff;
         texturingState.env[i].combineRGB = GL_REPLACE;
         texturingState.env[i].combineAlpha = GL_REPLACE;
         texturingState.env[i].src0RGB = GL_PREVIOUS;

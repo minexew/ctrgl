@@ -202,6 +202,9 @@ void glGetNamedTexDataPointerCTR(GLuint texture, GLvoid** data_out);
 void glTexEnvubvCTR(GLenum target,  /* must be GL_TEXTURE_ENV */
         GLenum pname,               /* must be GL_TEXTURE_ENV_COLOR */
         const GLubyte* params);
+void glTexEnvi(GLenum target,       /* must be GL_TEXTURE_ENV */
+        GLenum pname,               /* must be GL_SRCn_RGB */
+        GLint param);
 
 /* **** SHADERS **** */
 GLuint glCreateProgram(void);

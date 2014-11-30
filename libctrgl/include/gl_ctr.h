@@ -171,7 +171,7 @@ GLstereoStateCTR;
 
 typedef struct
 {
-    uint32_t primaryColor;
+    uint32_t constant;
     GLenum combineRGB   : 4;
     GLenum combineAlpha : 4;
     GLenum src0RGB      : 4;

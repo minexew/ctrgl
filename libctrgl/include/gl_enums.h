@@ -184,7 +184,10 @@ enum GLtevSrc
 
 enum GLtexEnvPname
 {
-    GL_TEXTURE_ENV_COLOR
+    GL_TEXTURE_ENV_COLOR,
+    GL_SRC0_RGB,
+    GL_SRC1_RGB,
+    GL_SRC2_RGB,
 };
 
 enum GLtexEnvTarget
