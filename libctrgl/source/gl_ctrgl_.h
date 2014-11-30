@@ -255,44 +255,53 @@ void ctrglFinishRendering()
         adjustBufferMatrices(adjustmentMatrix, stereoState.interaxial * (-0.5f));
 
         //we wait for the left buffer to finish drawing
-        waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D);
+        if (waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D))
+            return;
+
         GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0, (u32*)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL), 0x019001E0, 0x01001000);
-        waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF);
+        if (waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF))
+            return;
 
         //we draw the right buffer, wait for it to finish and then switch back to left one
         //clear the screen
         GX_SetMemoryFill(NULL, gpuFrameBuffer, clearColor, &gpuFrameBuffer[0x2EE00], 0x201,
                 (u32*)gpuDepthBuffer, 0xffffffff, &gpuDepthBuffer[0x2EE00], 0x201);
-        waitEvent(GSPEVENT_PSC0, CTRGL_TIMEOUT_PSC0);
+        if (waitEvent(GSPEVENT_PSC0, CTRGL_TIMEOUT_PSC0))
+            return;
 
         //draw the right framebuffer
         GPUCMD_FlushAndRun(NULL);
-        waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D);
+        if (waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D))
+            return;
 
         //transfer from GPU output buffer to actual framebuffer
         GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0,
                 (u32*)gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, NULL, NULL),
                 0x019001E0, 0x01001000);
-        waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF);
+        if (waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF))
+            return;
 
         GPUCMD_SetBuffer(gpuCmd, gpuCmdSize, 0);
     }
     else
     {
         GPUCMD_FlushAndRun(NULL);
-        waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D);
+        if (waitEvent(GSPEVENT_P3D, CTRGL_TIMEOUT_P3D))
+            return;
 
         /* transfer from PICA framebuffer to CTR framebuffer */
         GX_SetDisplayTransfer(NULL, gpuFrameBuffer, 0x019001E0,
                 (u32*)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL),
                 0x019001E0, 0x01001000);
-        waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF);
+        if (waitEvent(GSPEVENT_PPF, CTRGL_TIMEOUT_PPF))
+            return;
     }
 
     /* glClear(GL_COLOR_BIT | GL_DEPTH_BIT) */
     GX_SetMemoryFill(NULL, gpuFrameBuffer, clearColor, &gpuFrameBuffer[0x2EE00], 0x201,
             (u32*)gpuDepthBuffer, 0xffffffff, &gpuDepthBuffer[0x2EE00], 0x201);
-    waitEvent(GSPEVENT_PSC0, CTRGL_TIMEOUT_PSC0);
+    if (waitEvent(GSPEVENT_PSC0, CTRGL_TIMEOUT_PSC0))
+        return;
 
     gfxSwapBuffersGpu();
 
