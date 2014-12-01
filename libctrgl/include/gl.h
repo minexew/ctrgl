@@ -123,6 +123,8 @@ void ctrglSetTimeout(CTRGLtimeoutType type, u64 nanoseconds);
 void ctrglSetTimeoutHandler(CTRGLtimeoutHandler handler);
 void ctrglSetVsyncWait(GLboolean enabled);      /* enabled by default */
 
+void ctrglAllocateVertexCache(GLsize sizeInBytes);
+
 void ctrglResetGPU(void);
 void ctrglBeginRendering(void);
 void ctrglFlushState(uint32_t mask);
@@ -271,6 +273,7 @@ void glStereoEnableCTR(GLfloat interaxial);
 
 /* **** DRAWING **** */
 void glDrawArrays(GLenum mode, GLint first, GLsizei count);
+void* glVerticesCTR(GLsize numVertices);
 
 #ifdef __cplusplus
 }

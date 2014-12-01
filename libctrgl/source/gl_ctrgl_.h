@@ -111,6 +111,9 @@ void ctrglInit(void)
     dirtyTexUnits = 0xff;
     dirtyTexEnv = 0xff;
 
+    vertexCache = NULL;
+    vertexCacheUsage = 0;
+
     /* TODO: initialize matrices */
 
     boundBuffer = NULL;
@@ -130,6 +133,8 @@ void ctrglInit(void)
 void ctrglExit(void)
 {
     /* FIXME: take the cleanup a bit more seriously... */
+
+    linearFree(vertexCache);
 }
 
 void ctrglAllocateCommandBuffers(GLsize size, GLuint count)
@@ -142,6 +147,11 @@ void ctrglAllocateCommandBuffers(GLsize size, GLuint count)
         gpuCmdRight = (u32*)linearAlloc(gpuCmdSize * 4);
     else
         gpuCmdRight = NULL;
+}
+
+void ctrglAllocateVertexCache(GLsize sizeInBytes)
+{
+    vertexCache = linearMemAlign(sizeInBytes, 128);
 }
 
 void ctrglGetCommandBuffers(u32* size, u32** gpuCmd_, u32** gpuCmdRight_)
@@ -180,6 +190,7 @@ void ctrglBeginRendering(void)
 {
     dirtyState |= (GL_CULL_FACE | GL_STENCIL_TEST | GL_BLEND | GL_ALPHA_TEST | GL_DEPTH_TEST
             | GL_SHADER_PROGRAM_CTR | GL_TEXTURING_CTR | GL_VERTEX_ARRAYS_CTR);
+    vertexCacheUsage = 0;
 
     GPUCMD_SetBufferOffset(0);
     bufferMatrixListLength = 0;
@@ -227,6 +238,15 @@ void ctrglFlushState(uint32_t mask)
         setUpVertexArrays();
 
     dirtyState &= ~mask;
+}
+
+static void ctrglFlushVertexCache()
+{
+    if (vertexCacheUsage == 0)
+        return;
+
+    gpuDrawArrayDirectly(GPU_TRIANGLES, vertexCache, vertexCacheUsage);
+    vertexCacheUsage = 0;
 }
 
 void ctrglFinishRendering()
