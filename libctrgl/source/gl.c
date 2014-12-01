@@ -58,13 +58,11 @@ static u32 clearColor;
 static GLboolean vsyncWait;
 static u64 timeout[CTRGL_TIMEOUT_MAX_];
 static CTRGLtimeoutHandler timeoutHandler;
+static CTRGLvertexCache vertexCache;
 
 static uint32_t dirtyState;
 static uint32_t enableState;
 static uint8_t dirtyMatrices, dirtyTexEnv, dirtyTexUnits;
-
-static void* vertexCache;
-static GLsize vertexCacheUsage;
 
 static u32 gpuCmdSize;
 static u32* gpuCmd;
@@ -88,7 +86,7 @@ void glEnable(GLenum cap)
 
     if (!(enableState & cap))
     {
-        ctrglFlushVertexCache();
+        flushVertexCache();
 
         enableState |= cap;
         dirtyState |= cap;
@@ -107,7 +105,7 @@ void glDisable(GLenum cap)
 
     if (enableState & cap)
     {
-        ctrglFlushVertexCache();
+        flushVertexCache();
 
         enableState &= ~cap;
         dirtyState |= cap;
@@ -127,7 +125,7 @@ void glAlphaFunc(GLenum func, GLclampf ref)
 
 void glAlphaFuncubCTR(GLenum func, GLubyte ref)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     alphaTestState.func = func;
     alphaTestState.ref = ref;
@@ -137,7 +135,7 @@ void glAlphaFuncubCTR(GLenum func, GLubyte ref)
 /* Culling */
 void glCullFace(GLenum mode)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     cullState.cullFace = mode;
     dirtyState |= GL_CULL_FACE;
@@ -145,7 +143,7 @@ void glCullFace(GLenum mode)
 
 void glFrontFace(GLenum mode)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     cullState.frontFace = mode;
     dirtyState |= GL_CULL_FACE;
@@ -154,7 +152,7 @@ void glFrontFace(GLenum mode)
 /* Depth Test */
 void glDepthFunc(GLenum func)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     depthTestState.func = func;
     dirtyState |= GL_DEPTH_TEST;
@@ -162,7 +160,7 @@ void glDepthFunc(GLenum func)
 
 void glDepthMask(GLboolean flag)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     depthTestState.mask = flag;
     dirtyState |= GL_DEPTH_TEST;
@@ -170,7 +168,7 @@ void glDepthMask(GLboolean flag)
 
 void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     depthTestState.colorMask = (red | (green << 1) | (blue << 2) | (alpha << 3));
     dirtyState |= GL_DEPTH_TEST;
@@ -179,7 +177,7 @@ void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha
 /* Stencil */
 void glStencilFunc(GLenum func, GLint ref, GLuint mask)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     stencilState.func = func;
     stencilState.ref = ref;
@@ -189,7 +187,7 @@ void glStencilFunc(GLenum func, GLint ref, GLuint mask)
 
 void glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     stencilState.sfail = sfail;
     stencilState.dpfail = dpfail;
@@ -200,7 +198,7 @@ void glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 /* Blending */
 void glBlendColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     glBlendColorRgba8CTR(glMakeRgba8CTR(
         clampf2ubyte(red), clampf2ubyte(green), clampf2ubyte(blue), clampf2ubyte(alpha)
@@ -209,7 +207,7 @@ void glBlendColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 
 void glBlendColorRgba8CTR(uint32_t rgba)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     blendState.blendColor = rgba;
     dirtyState |= GL_BLEND;
@@ -217,7 +215,7 @@ void glBlendColorRgba8CTR(uint32_t rgba)
 
 void glBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     blendState.modeRGB = modeRGB;
     blendState.modeAlpha = modeAlpha;
@@ -226,7 +224,7 @@ void glBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
 
 void glBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     blendState.srcRGB = srcRGB;
     blendState.dstRGB = dstRGB;
@@ -300,7 +298,7 @@ void glBindTexture(GLenum target, GLuint texture)
     if (texturingState.texUnits[unit].boundTexture == tex)
         return;
 
-    ctrglFlushVertexCache();
+    flushVertexCache();
     texturingState.texUnits[unit].boundTexture = tex;
 
     dirtyState |= GL_TEXTURING_CTR;
@@ -428,7 +426,7 @@ void glUseProgram(GLuint program)
     if (shaderState.program == prog)
         return;
 
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     shaderState.program = prog;
 
@@ -488,7 +486,7 @@ void glUniform4fv(GLint location, GLsizei count, const GLfloat* value)
 
 void glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     if (transpose)
     {
@@ -523,7 +521,7 @@ void glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, cons
 /* **** VERTEX ARRAYS **** */
 void glVertexFormatCTR(GLuint numAttribs, GLuint vertexSize)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     vertexArraysState.numAttribs = numAttribs;
     vertexArraysState.vertexSize = vertexSize;
@@ -532,7 +530,7 @@ void glVertexFormatCTR(GLuint numAttribs, GLuint vertexSize)
 
 void glVertexAttribCTR(GLuint index, GLint size, GLenum type)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     vertexArraysState.attribs[index].size = size - 1;
     vertexArraysState.attribs[index].type = type;
@@ -694,7 +692,7 @@ void glGetDirectMatrixfCTR(GLenum mode, GLfloat* m)
 
 void glProjectionMatrixfCTR(const GLfloat* m)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     memcpy(matricesState.projection, m, sizeof(GLmat4x4));
     matricesState.stereoMode = GL_STEREO_NONE_CTR;
@@ -705,7 +703,7 @@ void glProjectionMatrixfCTR(const GLfloat* m)
 
 void glOrthoProjectionMatrixfCTR(const GLfloat* m, float skew, float screenZ)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     memcpy(matricesState.projection, m, sizeof(GLmat4x4));
     matricesState.stereoMode = GL_STEREO_ORTHO_CTR;
@@ -718,7 +716,7 @@ void glOrthoProjectionMatrixfCTR(const GLfloat* m, float skew, float screenZ)
 
 void glPerspectiveProjectionMatrixfCTR(const GLfloat* m, float nearZ, float screenZ, float scale)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     memcpy(matricesState.projection, m, sizeof(GLmat4x4));
     matricesState.stereoMode = GL_STEREO_PERSPECTIVE_CTR;
@@ -732,7 +730,7 @@ void glPerspectiveProjectionMatrixfCTR(const GLfloat* m, float nearZ, float scre
 
 void glModelviewMatrixfCTR(const GLfloat* m)
 {
-    ctrglFlushVertexCache();
+    flushVertexCache();
 
     memcpy(matricesState.modelview, m, sizeof(GLmat4x4));
 
@@ -740,6 +738,7 @@ void glModelviewMatrixfCTR(const GLfloat* m)
     dirtyMatrices |= (1 << GL_MODELVIEW);
 }
 
+/* **** DRAWING **** */
 void glDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
     /* TODO: precompute commands */
@@ -760,4 +759,20 @@ void glDrawArrays(GLenum mode, GLint first, GLsizei count)
     //}
     // debugValue[5]+=(u32)(svcGetSystemTick()-val);
     // debugValue[6]++;
+}
+
+void* glVerticesCTR(GLenum mode, GLsize numVertices)
+{
+    void* ret;
+
+    if (mode != vertexCache.mode)
+    {
+        flushVertexCache();
+        vertexCache.mode = mode;
+    }
+
+    ret = (uint8_t*) vertexCache.buffer + vertexCache.numVertices * vertexArraysState.vertexSize;
+
+    vertexCache.numVertices += numVertices;
+    return ret;
 }

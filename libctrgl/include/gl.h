@@ -273,7 +273,7 @@ void glStereoEnableCTR(GLfloat interaxial);
 
 /* **** DRAWING **** */
 void glDrawArrays(GLenum mode, GLint first, GLsizei count);
-void* glVerticesCTR(GLsize numVertices);
+void* glVerticesCTR(GLenum mode, GLsize numVertices);
 
 #ifdef __cplusplus
 }

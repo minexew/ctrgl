@@ -214,6 +214,16 @@ typedef struct
 }
 GLvertexArraysStateCTR;
 
+/* **** CTRGL-specific **** */
+
 typedef void (*CTRGLtimeoutHandler)(CTRGLtimeoutType type);
+
+typedef struct
+{
+    void* buffer;
+    GLenum mode;
+    GLsize numVertices;
+}
+CTRGLvertexCache;
 
 #endif

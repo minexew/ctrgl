@@ -3,14 +3,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <3ds.h>
+#include <gl.h>
 
 #include "math.h"
 
 #include "test_vsh_shbin.h"
 #include "texture_bin.h"
 #include "texture2_bin.h"
-
-#include "gl.h"
 
 //will be moved into ctrulib at some point
 #define CONFIG_3D_SLIDERSTATE (*(float*)0x1FF81080)
@@ -327,6 +326,7 @@ int main(int argc, char** argv)
 
     glDeleteBuffers(1, &vbuf);
     glDeleteTextures(2, textures);
+    glDeleteProgram(program);
 
     ctrglExit();
     hidExit();

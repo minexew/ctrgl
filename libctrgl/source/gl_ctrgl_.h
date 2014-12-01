@@ -28,6 +28,21 @@
 #error This is a private CTRGL implementation file. Please use #include <gl.h> instead.
 #endif
 
+static void flushVertexCache()
+{
+    GLsize numVertices = vertexCache.numVertices;
+
+    if (numVertices == 0)
+        return;
+
+    vertexCache.numVertices = 0;
+
+    ctrglFlushState(0xffffffff);
+    flushMatrices();
+
+    gpuDrawArrayDirectly(vertexCache.mode, vertexCache.buffer, numVertices);
+}
+
 void ctrglInit(void)
 {
     int i;
@@ -111,8 +126,7 @@ void ctrglInit(void)
     dirtyTexUnits = 0xff;
     dirtyTexEnv = 0xff;
 
-    vertexCache = NULL;
-    vertexCacheUsage = 0;
+    vertexCache.buffer = NULL;
 
     /* TODO: initialize matrices */
 
@@ -134,7 +148,7 @@ void ctrglExit(void)
 {
     /* FIXME: take the cleanup a bit more seriously... */
 
-    linearFree(vertexCache);
+    linearFree(vertexCache.buffer);
 }
 
 void ctrglAllocateCommandBuffers(GLsize size, GLuint count)
@@ -151,7 +165,7 @@ void ctrglAllocateCommandBuffers(GLsize size, GLuint count)
 
 void ctrglAllocateVertexCache(GLsize sizeInBytes)
 {
-    vertexCache = linearMemAlign(sizeInBytes, 128);
+    vertexCache.buffer = linearMemAlign(sizeInBytes, 128);
 }
 
 void ctrglGetCommandBuffers(u32* size, u32** gpuCmd_, u32** gpuCmdRight_)
@@ -190,7 +204,7 @@ void ctrglBeginRendering(void)
 {
     dirtyState |= (GL_CULL_FACE | GL_STENCIL_TEST | GL_BLEND | GL_ALPHA_TEST | GL_DEPTH_TEST
             | GL_SHADER_PROGRAM_CTR | GL_TEXTURING_CTR | GL_VERTEX_ARRAYS_CTR);
-    vertexCacheUsage = 0;
+    vertexCache.numVertices = 0;
 
     GPUCMD_SetBufferOffset(0);
     bufferMatrixListLength = 0;
@@ -240,17 +254,10 @@ void ctrglFlushState(uint32_t mask)
     dirtyState &= ~mask;
 }
 
-static void ctrglFlushVertexCache()
-{
-    if (vertexCacheUsage == 0)
-        return;
-
-    gpuDrawArrayDirectly(GPU_TRIANGLES, vertexCache, vertexCacheUsage);
-    vertexCacheUsage = 0;
-}
-
 void ctrglFinishRendering()
 {
+    flushVertexCache();
+
     GPUCMD_Finalize();
     GPU_FinishDrawing();
 
