@@ -61,13 +61,32 @@ static void gpuDepthRange(float nearVal, float farVal)
 
 static void gpuDrawArrayDirectly(GPU_Primitive_t primitive, u8* data, u32 n)
 {
+    uint32_t base = (osConvertVirtToPhys((u32)data));
+    uint32_t x227;
+
+    /*if (n > 0x10)
+    {
+        if ((((n - 0x10) * 2 + base) & 0xfff) >= 0xfe0)
+            x227 = 0x20;
+        else
+            x227 = 0;
+    }
+    else
+    {
+        if ((base & 0xfff) >= 0xfe0)
+            x227 = 0x20;
+        else
+            x227 = 0;
+    }*/
+        x227 = 0;
+
     //set attribute buffer address
-    GPUCMD_AddSingleParam(0x000F0200, (osConvertVirtToPhys((u32)data))>>3);
+    GPUCMD_AddSingleParam(0x000F0200, base >> 3);
     //set primitive type
     GPUCMD_AddSingleParam(0x0002025E, primitive);
     GPUCMD_AddSingleParam(0x0002025F, 0x00000001);
     //index buffer not used for drawArrays but 0x000F0227 still required
-    GPUCMD_AddSingleParam(0x000F0227, 0x80000000);
+    GPUCMD_AddSingleParam(0x000F0227, 0x80000000 | x227);
     //pass number of vertices
     GPUCMD_AddSingleParam(0x000F0228, n);
 
@@ -110,7 +129,7 @@ static void gpuSetTexture(int unit, void* data, u16 width, u16 height, u32 param
     }
 }
 
-void waitEvent(int gspEventId, CTRGLtimeoutType timeoutType)
+int waitEvent(int gspEventId, CTRGLtimeoutType timeoutType)
 {
     s32 ret = svcWaitSynchronization(gspEvents[gspEventId], timeout[timeoutType]);
 
@@ -118,4 +137,6 @@ void waitEvent(int gspEventId, CTRGLtimeoutType timeoutType)
         svcClearEvent(gspEvents[gspEventId]);
     else if (timeoutHandler)
         timeoutHandler(timeoutType);
+
+    return ret;
 }
