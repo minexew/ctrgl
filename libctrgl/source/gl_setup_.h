@@ -64,6 +64,64 @@ static void setUpDepthTest()
         GPUCMD_AddSingleParam(0x000F0107, 0 | (depthTestState.colorMask << 8) | (depthTestState.mask << 12));
 }
 
+void DVLP_SendCode(DVLP_s* dvlp, DVLE_type type)
+{
+	if(!dvlp)return;
+	
+	GPU_SendShaderCode(type, dvlp->codeData, 0, dvlp->codeSize);
+}
+
+void DVLP_SendOpDesc(DVLP_s* dvlp, DVLE_type type)
+{
+	if(!dvlp)return;
+
+	GPU_SendOperandDescriptors(type, dvlp->opcdescData, 0, dvlp->opdescSize);
+}
+
+void DVLE_SendOutmap(DVLE_s* dvle)
+{
+	if(!dvle)return;
+
+	u32 regOffset=(dvle->type==GEOMETRY_SHDR)?(-0x30):(0x0);
+
+	if(dvle->type==VERTEX_SHDR)
+	{
+		GPUCMD_AddWrite(GPUREG_024A, dvle->outmapData[0]-1); //?
+		GPUCMD_AddWrite(GPUREG_0251, dvle->outmapData[0]-1); //?
+	}
+	
+	GPUCMD_AddWrite(GPUREG_VSH_OUTMAP_MASK+regOffset, dvle->outmapMask);
+	GPU_SetShaderOutmap(dvle->outmapData);
+}
+
+void DVLE_SendConstants(DVLE_s* dvle)
+{
+	if(!dvle)return;
+
+	u32 regOffset=(dvle->type==GEOMETRY_SHDR)?(-0x30):(0x0);
+
+	u32 param[4];
+	u32 rev[3];
+	u8* rev8=(u8*)rev;
+
+	int i;
+	DVLE_constEntry_s* cnst=dvle->constTableData;
+	for(i=0;i<dvle->constTableSize;i++,cnst++)
+	{
+		memcpy(&rev8[0], &cnst->data[0], 3);
+		memcpy(&rev8[3], &cnst->data[1], 3);
+		memcpy(&rev8[6], &cnst->data[2], 3);
+		memcpy(&rev8[9], &cnst->data[3], 3);
+
+		param[0x0]=(cnst->id)&0xFF;
+		param[0x1]=rev[2];
+		param[0x2]=rev[1];
+		param[0x3]=rev[0];
+
+		GPUCMD_AddIncrementalWrites(GPUREG_VSH_FLOATUNIFORM_CONFIG+regOffset, param, 4);
+	}
+}
+
 static void setUpShaders()
 {
     DVLB_s* dvlb;
@@ -76,8 +134,8 @@ static void setUpShaders()
     GPUCMD_AddSingleParam(0x00010229, 0x00000000);
     GPUCMD_AddSingleParam(0x00010244, 0x00000000);
 
-    DVLP_SendCode(&dvlb->DVLP);
-    DVLP_SendOpDesc(&dvlb->DVLP);
+    DVLP_SendCode(&dvlb->DVLP, GPU_VERTEX_SHADER);
+    DVLP_SendOpDesc(&dvlb->DVLP, GPU_VERTEX_SHADER);
     DVLE_SendConstants(dvle);
 
     GPUCMD_AddSingleParam(0x00080229, 0x00000000);

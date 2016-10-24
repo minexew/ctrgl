@@ -203,7 +203,7 @@ int main(int argc, char** argv)
     // init services
     srvInit();  
     aptInit();
-    gfxInit();
+    gfxInitDefault();
     hidInit(NULL);
 
     // init GPU

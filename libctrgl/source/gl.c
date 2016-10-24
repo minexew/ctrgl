@@ -26,6 +26,9 @@
 
 #define CTR_GL_C
 
+#include <stdlib.h>
+#include <string.h>
+
 /* TODO: linearAllocMutex */
 
 /* TODO: get rid of these */
@@ -354,7 +357,7 @@ void glShutdownProgramCTR(GLprogramCTR* prog)
         dirtyState |= GL_SHADER_PROGRAM_CTR;
     }
 
-    SHDR_FreeDVLB(prog->dvlb);
+    DVLB_Free(prog->dvlb);
     free(prog->shbin);
 }
 
@@ -409,7 +412,7 @@ GLint glGetUniformLocation(GLuint program, const GLchar* name)
     GLprogramCTR* prog;
 
     prog = (GLprogramCTR*) program;
-    return SHDR_GetUniformRegister(prog->dvlb, name, 0);
+    return DVLE_GetUniformRegister(&prog->dvlb->DVLE[0], name);
 }
 
 void glLoadProgramBinaryCTR(GLuint program, const void* shbin, GLsize size)
@@ -432,7 +435,7 @@ void glLoadProgramBinary2CTR(GLuint program, void* shbin, GLsize size, GLmemoryT
     else if (shbinMode == GL_MEMORY_TRANSFER_CTR)
         prog->shbin = shbin;
 
-    prog->dvlb = SHDR_ParseSHBIN((u32*) shbin, size);
+    prog->dvlb = DVLB_ParseFile((u32*) shbin, size);
 
     prog->projectionUniform = glGetUniformLocation(program, "projection");
     prog->modelviewUniform = glGetUniformLocation(program, "modelview");
@@ -472,10 +475,10 @@ void glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, cons
         param[0xe] = value[13];
         param[0xf] = value[12];
 
-        GPU_SetUniform(location, (u32*) param, 4);
+        GPU_SetFloatUniform(GPU_VERTEX_SHADER, location, (u32*) param, 4);
     }
     else
-        GPU_SetUniform(location, (u32*) value, 4);
+        GPU_SetFloatUniform(GPU_VERTEX_SHADER, location, (u32*) value, 4);
 }
 
 /* **** VERTEX ARRAYS **** */
